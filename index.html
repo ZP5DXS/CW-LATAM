@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="theme-color" content="#07110d"/>
+<title>CW LATAM LIVE — 40m Reverse Beacon Radar</title>
+<meta name="description" content="Radar CW en tiempo real para 40 metros, escuchado por Reverse Beacon Network desde Sudamérica."/>
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<style>
+:root{
+  --bg:#050d09;--panel:#09150f;--line:#173426;
+  --text:#e5f8ea;--muted:#789a86;--green:#58ff92;--amber:#ffc85c;
+  --shadow:0 18px 60px rgba(0,0,0,.34);
+}
+*{box-sizing:border-box}
+html,body{
+  margin:0;
+  min-height:100%;
+  background:
+    radial-gradient(circle at 50% -18%,rgba(88,255,146,.10),transparent 36rem),
+    linear-gradient(180deg,#06100b,#030806);
+  color:var(--text);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif
+}
+body{min-height:100vh}
+.shell{max-width:1580px;margin:auto;padding:16px}
+.topbar{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.brand{display:flex;gap:13px;align-items:center}
+.logo{width:44px;height:44px;border-radius:50%;border:1px solid rgba(88,255,146,.35);
+ background:radial-gradient(circle at 50% 50%,rgba(88,255,146,.18) 0 8%,transparent 8.5% 31%,rgba(88,255,146,.08) 31.5% 32%,transparent 32.5%),linear-gradient(145deg,#0f281a,#07110c);
+ box-shadow:0 0 32px rgba(88,255,146,.10);position:relative}
+.logo:after{content:"";position:absolute;left:50%;top:50%;width:1px;height:20px;background:linear-gradient(var(--green),transparent);transform-origin:0 0;animation:tinySweep 4s linear infinite}
+@keyframes tinySweep{to{transform:rotate(360deg)}}
+.brand h1{font-size:19px;letter-spacing:.12em;margin:0;font-weight:850}
+.brand small{display:block;color:var(--muted);font-size:10px;letter-spacing:.1em;margin-top:2px}
+.statuses{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.pill{border:1px solid var(--line);border-radius:999px;padding:7px 10px;font-size:10px;color:#9bc1a8;background:#07120d}
+.pill.live{color:var(--green);border-color:rgba(88,255,146,.32)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;background:currentColor;box-shadow:0 0 10px currentColor}
+
+.grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(350px,.8fr);gap:14px}
+.panel{background:linear-gradient(180deg,rgba(11,27,18,.96),rgba(6,15,10,.97));border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+.panel-head{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.panel-title{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#c4dfcc;font-weight:800}
+.panel-sub{font-size:9px;color:var(--muted)}
+
+.map-wrap{position:relative;height:630px;background:#04100a;overflow:hidden}
+#map{position:absolute;inset:0;background:#04100a}
+.radar-rings{position:absolute;inset:0;z-index:430;pointer-events:none;
+ background:radial-gradient(circle at 50% 50%,transparent 0 11%,rgba(88,255,146,.055) 11.1% 11.35%,transparent 11.45% 22%,rgba(88,255,146,.044) 22.1% 22.35%,transparent 22.45% 34%,rgba(88,255,146,.032) 34.1% 34.35%,transparent 34.45% 46%,rgba(88,255,146,.025) 46.1% 46.35%,transparent 46.45%);
+ mix-blend-mode:screen}
+.radar-sweep{position:absolute;left:50%;top:50%;width:76vmax;height:76vmax;max-width:1200px;max-height:1200px;transform:translate(-50%,-50%);z-index:431;pointer-events:none;border-radius:50%;
+ background:conic-gradient(from 0deg,rgba(88,255,146,.20) 0deg,rgba(88,255,146,.08) 7deg,rgba(88,255,146,.015) 18deg,transparent 36deg 360deg);
+ animation:radarSweep 6.2s linear infinite}
+.radar-sweep:after{content:"";position:absolute;left:50%;top:50%;width:50%;height:1px;background:linear-gradient(90deg,rgba(88,255,146,.9),rgba(88,255,146,.05));transform-origin:0 50%}
+@keyframes radarSweep{to{transform:translate(-50%,-50%) rotate(360deg)}}
+
+.map-badge{position:absolute;left:14px;top:92px;z-index:500;background:rgba(4,13,8,.84);backdrop-filter:blur(9px);border:1px solid rgba(88,255,146,.24);border-radius:11px;padding:9px 11px;font-size:10px}
+.map-badge b{color:var(--green)}
+.legend{position:absolute;right:14px;bottom:42px;z-index:500;background:rgba(4,13,8,.86);backdrop-filter:blur(9px);border:1px solid #173426;border-radius:12px;padding:11px 13px;font-size:11px;font-weight:800;color:#dceee2}
+.legend span{display:flex;align-items:center;gap:7px;margin:5px 0}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%}
+
+.dial{padding:18px 16px 14px;border-top:1px solid var(--line);background:linear-gradient(180deg,#07140e,#06100b)}
+.dial-top{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-bottom:10px}
+.dial-readout{font:900 28px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:-.05em;color:#dff7e6}
+.dial-readout small{font-size:10px;color:var(--muted);letter-spacing:.08em;margin-left:6px}
+.dial-note{font-size:9px;color:var(--muted);text-align:right}
+.dial-scale{position:relative;height:92px;border-radius:12px;background:linear-gradient(180deg,#08140e,#050c08);border:1px solid #163426;overflow:hidden}
+.dial-scale:before{content:"";position:absolute;left:0;right:0;top:18px;height:26px;background:repeating-linear-gradient(90deg,rgba(185,224,199,.24) 0 1px,transparent 1px 2%,rgba(185,224,199,.08) 2% 2.2%,transparent 2.2% 4%)}
+.dial-center{position:absolute;top:6px;bottom:6px;width:2px;background:var(--amber);box-shadow:0 0 10px rgba(255,200,92,.45)}
+.dial-center:after{content:"7033";position:absolute;top:-1px;left:50%;transform:translate(-50%,-100%);font:700 9px ui-monospace,monospace;color:var(--amber)}
+.dial-labels{position:absolute;left:0;right:0;bottom:4px;display:flex;justify-content:space-between;padding:0 8px;color:#648370;font:8px ui-monospace,monospace}
+.dial-spots{position:absolute;inset:0}
+.dial-spot{position:absolute;top:26px;transform:translateX(-50%);font:800 9px ui-monospace,monospace;color:var(--green);white-space:nowrap;transition:opacity .5s}
+.dial-spot:before{content:"";display:block;margin:auto;width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+
+.feed{grid-column:1/-1}
+.live-decode{height:100%;display:flex;flex-direction:column}
+.decode-stream{padding:12px;display:flex;flex-direction:column;gap:8px;max-height:720px;overflow:auto}
+.decode-item{border:1px solid #143123;border-radius:12px;padding:10px 11px;background:linear-gradient(145deg,#0b1b13,#07120d);display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;transition:opacity .4s}
+.decode-item .flag{font-size:21px}
+.decode-main{min-width:0}
+.decode-call{font-size:15px;font-weight:900;letter-spacing:.04em}
+.decode-meta{margin-top:2px;color:#8eae99;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.decode-right{text-align:right}
+.decode-freq{font:800 13px ui-monospace,monospace;color:var(--green)}
+.decode-age{font-size:8px;color:#718d7b;margin-top:2px}
+.empty{padding:28px;text-align:center;color:var(--muted);font-size:10px}
+
+.table-wrap{overflow:auto;max-height:430px}
+table{width:100%;border-collapse:collapse;font-size:10px}
+th{position:sticky;top:0;background:#0a1a12;color:#789c87;text-align:left;font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:10px;border-bottom:1px solid var(--line);z-index:2}
+td{padding:10px;border-bottom:1px solid #10261b;white-space:nowrap}
+tr.new{animation:flash 1.1s ease-out}
+@keyframes flash{0%{background:rgba(88,255,146,.18)}100%{background:transparent}}
+.callcell{font-weight:900;color:#e4faea}
+.freqcell{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--green)}
+
+.footer{padding:15px 2px 4px;display:flex;justify-content:space-between;gap:10px;color:#527160;font-size:8px}
+.leaflet-container{font-family:inherit}
+.leaflet-tile{filter:saturate(.28) brightness(.48) hue-rotate(86deg)}
+.leaflet-control-attribution{background:rgba(4,10,7,.72)!important;color:#72917c!important}
+.leaflet-control-attribution a{color:#8ab89a!important}
+.leaflet-control-zoom{margin-top:14px!important}
+.leaflet-control-zoom a{background:#0a1711!important;color:#bde7cb!important;border-color:#1d3b2b!important}
+
+.spot-label{background:rgba(4,13,8,.90);transform:translate(var(--ox,0px),var(--oy,0px));color:#dff7e6;border:1px solid rgba(88,255,146,.36);border-radius:8px;padding:5px 7px;box-shadow:0 0 18px rgba(88,255,146,.08);white-space:nowrap;font-size:9px;line-height:1.25;transition:opacity .4s}
+.spot-label.dx{border-color:rgba(255,200,92,.35)}
+.spot-label .c{font-weight:900;font-size:10px}
+.spot-label .m{color:#9ab5a4}
+.label-anchor{width:5px;height:5px;border-radius:50%;background:#dff7e6;box-shadow:0 0 8px rgba(88,255,146,.8)}
+.missile-head{width:11px;height:11px;border-radius:50%;background:#fff;border:2px solid #0a130e;box-shadow:0 0 12px #fff,0 0 24px rgba(88,255,146,.7)}
+.missile-head.dx{box-shadow:0 0 12px #fff,0 0 24px rgba(255,200,92,.8)}
+
+@media(max-width:980px){.grid{grid-template-columns:1fr}.map-wrap{height:520px}}
+@media(max-width:620px){
+ .shell{padding:9px}.topbar{align-items:flex-start}.statuses{max-width:150px}.brand h1{font-size:15px}
+ .map-wrap{height:460px}.panel{border-radius:14px}.hide-mobile{display:none}.dial-readout{font-size:24px}
+ .legend{font-size:10px;bottom:38px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<header class="topbar">
+  <div class="brand">
+    <div class="logo"></div>
+    <div><h1>CW LATAM LIVE</h1><small>40M RADAR · SOUTH AMERICA</small></div>
+  </div>
+  <div class="statuses">
+    <span class="pill live"><span class="dot"></span><span id="liveState">RBN OFFLINE</span></span>
+    <span class="pill">40m · CW</span>
+    <span class="pill">OPEN SOURCE</span>
+  </div>
+</header>
+
+<main class="grid">
+<section class="panel">
+  <div class="panel-head">
+    <div><div class="panel-title">Radar continental</div></div>
+    <div class="panel-sub" id="utcClock">--:--:-- UTC</div>
+  </div>
+
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="radar-rings"></div>
+    <div class="radar-sweep"></div>
+
+    <div class="map-badge"><b>● CW RADAR</b><br><span id="mapStatus">Esperando actividad…</span></div>
+
+    <div class="legend">
+      <span><i style="background:#58ff92"></i>LATAM</span>
+      <span><i style="background:#ffc85c"></i>DX</span>
+    </div>
+  </div>
+
+  <div class="dial">
+    <div class="dial-top">
+      <div class="dial-readout">7.033.0 <small>MHz</small></div>
+      <div class="dial-note">40M CW DIAL</div>
+    </div>
+    <div class="dial-scale">
+      <div class="dial-center" id="dialCenter"></div>
+      <div class="dial-spots" id="dialSpots"></div>
+      <div class="dial-labels"><span>7.000</span><span>7.010</span><span>7.020</span><span>7.030</span><span>7.040</span><span>7.050</span><span>7.060</span></div>
+    </div>
+  </div>
+</section>
+
+<aside class="panel live-decode">
+  <div class="panel-head">
+    <div><div class="panel-title">Actividad actual</div><div class="panel-sub">Se mantiene mientras siga en el radar</div></div>
+    <div class="panel-sub">10 MIN</div>
+  </div>
+  <div class="decode-stream" id="decodeStream"><div class="empty">Esperando actividad CW…</div></div>
+</aside>
+
+<section class="panel feed">
+  <div class="panel-head">
+    <div><div class="panel-title">Spots en tiempo real</div><div class="panel-sub">Decodificación del flujo RBN</div></div>
+    <div class="panel-sub">LIVE FEED</div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>UTC</th><th>DX</th><th>Frecuencia</th><th>SNR</th><th>WPM</th><th>Spotter</th><th>Ruta</th><th class="hide-mobile">Tipo</th></tr></thead>
+      <tbody id="feedBody"></tbody>
+    </table>
+  </div>
+</section>
+</main>
+
+<footer class="footer">
+  <span>Data source: Reverse Beacon Network · 40 m CW</span>
+  <span>Tags and traces fade out after 10 minutes</span>
+</footer>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+const ACTIVE_MS=10*60*1000;
+const spots=[],active=new Map(),mapObjects=[],mapByCall=new Map();
+let totalSpots=0,lastSpotAt=0;
+
+const SA_PREFIXES=["LU","LW","AY","AZ","LO","LP","LQ","LR","LS","LT","LV","CX","ZP","PY","PP","PQ","PR","PS","PT","PU","PV","PW","PX","ZY","ZZ","CE","CA","CB","CC","CD","XQ","OA","OB","CP","HC","HD","YV","YW","YY","HK","HJ","HK0","P4","PJ2","PJ4","PJ9","FY","8R","9Y","9Z","PZ","VP8"];
+const LATAM_PREFIXES=[...SA_PREFIXES,"XE","XF","XA","TG","TD","TI","TE","HP","HO","HR","HQ","YS","HU","YN","HT","CO","CM","CL","HI","HH","6Y","V3","KP4"];
+
+const stationDB={
+"ZP":{country:"Paraguay",flag:"🇵🇾",lat:-25.3,lon:-57.6},
+"LU":{country:"Argentina",flag:"🇦🇷",lat:-34.6,lon:-58.4},"LW":{country:"Argentina",flag:"🇦🇷",lat:-34.6,lon:-58.4},
+"CX":{country:"Uruguay",flag:"🇺🇾",lat:-34.9,lon:-56.2},
+"PY":{country:"Brasil",flag:"🇧🇷",lat:-23.55,lon:-46.63},"PP":{country:"Brasil",flag:"🇧🇷",lat:-23.55,lon:-46.63},"PT":{country:"Brasil",flag:"🇧🇷",lat:-15.8,lon:-47.9},"PU":{country:"Brasil",flag:"🇧🇷",lat:-22.9,lon:-43.2},
+"CE":{country:"Chile",flag:"🇨🇱",lat:-33.45,lon:-70.66},"XQ":{country:"Chile",flag:"🇨🇱",lat:-33.45,lon:-70.66},
+"OA":{country:"Perú",flag:"🇵🇪",lat:-12.05,lon:-77.04},"CP":{country:"Bolivia",flag:"🇧🇴",lat:-16.49,lon:-68.12},
+"HC":{country:"Ecuador",flag:"🇪🇨",lat:-0.18,lon:-78.47},"YV":{country:"Venezuela",flag:"🇻🇪",lat:10.48,lon:-66.9},
+"HK":{country:"Colombia",flag:"🇨🇴",lat:4.71,lon:-74.07},"FY":{country:"Guayana Francesa",flag:"🇬🇫",lat:4.94,lon:-52.33},
+"PZ":{country:"Surinam",flag:"🇸🇷",lat:5.85,lon:-55.2},"8R":{country:"Guyana",flag:"🇬🇾",lat:6.8,lon:-58.16},
+"K":{country:"USA",flag:"🇺🇸",lat:38.9,lon:-77.0},"W":{country:"USA",flag:"🇺🇸",lat:38.9,lon:-77.0},"N":{country:"USA",flag:"🇺🇸",lat:38.9,lon:-77.0},
+"VE":{country:"Canadá",flag:"🇨🇦",lat:45.42,lon:-75.69},"EA":{country:"España",flag:"🇪🇸",lat:40.42,lon:-3.70},
+"F":{country:"Francia",flag:"🇫🇷",lat:48.86,lon:2.35},"G":{country:"Inglaterra",flag:"🇬🇧",lat:51.51,lon:-0.13},
+"DL":{country:"Alemania",flag:"🇩🇪",lat:50.11,lon:8.68},"JA":{country:"Japón",flag:"🇯🇵",lat:35.68,lon:139.76},
+"VK":{country:"Australia",flag:"🇦🇺",lat:-33.87,lon:151.21}
+};
+
+function prefixInfo(call){
+ const c=(call||"").toUpperCase();
+ const keys=Object.keys(stationDB).sort((a,b)=>b.length-a.length);
+ const k=keys.find(p=>c.startsWith(p));
+ const base=k?stationDB[k]:{country:"DX",flag:"🌐",lat:0,lon:0};
+ const jitter=(str)=>((str.split("").reduce((a,x)=>a+x.charCodeAt(0),0)%100)-50)/100;
+ return {...base,lat:base.lat+jitter(c)*2.2,lon:base.lon+jitter(c.split("").reverse().join(""))*3.0};
+}
+function isSA(call){const c=(call||"").toUpperCase();return SA_PREFIXES.some(p=>c.startsWith(p))}
+function isLATAM(call){const c=(call||"").toUpperCase();return LATAM_PREFIXES.some(p=>c.startsWith(p))}
+function normalizeSpot(s){
+ return {ts:s.ts?new Date(s.ts).getTime():Date.now(),spotter:(s.spotter||s.de||"").toUpperCase(),dx:(s.dx||s.call||"").toUpperCase(),freq:Number(s.freq||s.frequency||0),snr:Number(s.snr??s.db??0),wpm:Number(s.wpm||s.speed||0),type:(s.type||"CQ").toUpperCase(),mode:(s.mode||"CW").toUpperCase()}
+}
+function valid(s){
+ const now=Date.now();
+ const age=now-s.ts;
+ return s.mode==="CW"
+   && s.type==="CQ"
+   && s.freq>=7000
+   && s.freq<=7300
+   && isSA(s.spotter)
+   && age>=0
+   && age<=ACTIVE_MS;
+}
+function ageText(ms){const sec=Math.max(0,Math.floor(ms/1000));return sec<60?sec+"s":Math.floor(sec/60)+"m"}
+
+const map=L.map("map",{zoomControl:true,worldCopyJump:true,minZoom:2}).setView([-18,-58],3);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"© OpenStreetMap"}).addTo(map);
+map.on("zoomend moveend resize",layoutMapLabels);
+
+function createSpotLabel(s){
+ const info=prefixInfo(s.dx),latam=isLATAM(s.dx);
+ const html=`<div class="spot-label ${latam?"":"dx"}">
+   <div class="c">${info.flag} ${s.dx}</div>
+   <div>${s.freq.toFixed(1)} kHz · ${s.snr>=0?"+":""}${s.snr} dB</div>
+   <div class="m" data-age="${s.ts}">0s</div>
+ </div>`;
+ return L.divIcon({className:"",html,iconSize:[128,46],iconAnchor:[64,23]});
+}
+
+function animateMissile(from,to,color,latam){
+ const trail=L.polyline([from],{color,weight:1.8,opacity:.78,dashArray:"2 8"}).addTo(map);
+ const head=L.marker(from,{icon:L.divIcon({className:"",html:`<div class="missile-head ${latam?"":"dx"}"></div>`,iconSize:[11,11],iconAnchor:[5.5,5.5]}),interactive:false}).addTo(map);
+ const start=performance.now(),dur=1450;
+ function frame(now){
+   const p=Math.min(1,(now-start)/dur),e=1-Math.pow(1-p,3);
+   const lat=from[0]+(to[0]-from[0])*e,lon=from[1]+(to[1]-from[1])*e;
+   head.setLatLng([lat,lon]);trail.addLatLng([lat,lon]);
+   if(p<1)requestAnimationFrame(frame);else setTimeout(()=>map.removeLayer(head),220)
+ }
+ requestAnimationFrame(frame);return trail
+}
+
+function drawMapSpot(s){
+ const spotter=prefixInfo(s.spotter),dx=prefixInfo(s.dx),latam=isLATAM(s.dx),color=latam?"#58ff92":"#ffc85c";
+ const spPos=[spotter.lat,spotter.lon],dxPos=[dx.lat,dx.lon];
+
+ // Cada spot REAL genera la trayectoria desde el receptor hacia quien transmite.
+ const trail=animateMissile(spPos,dxPos,color,latam);
+ const spotterDot=L.circleMarker(spPos,{
+   radius:3,color:"#9be7b2",weight:1,fillColor:"#58ff92",
+   fillOpacity:.55,opacity:.7,interactive:false
+ }).addTo(map);
+ mapObjects.push({trail,spotterDot,ts:s.ts});
+
+ // Una sola etiqueta por estación. Los spots posteriores solamente la actualizan.
+ let visual=mapByCall.get(s.dx);
+ if(!visual){
+   const label=L.marker(dxPos,{
+     icon:createSpotLabel(s),
+     interactive:false,
+     zIndexOffset:500
+   }).addTo(map);
+   const leader=L.polyline([dxPos,dxPos],{
+     color,weight:1,opacity:.55,dashArray:"2 5",interactive:false
+   }).addTo(map);
+   const anchor=L.circleMarker(dxPos,{
+     radius:2,color,weight:1,fillColor:color,fillOpacity:.9,interactive:false
+   }).addTo(map);
+
+   visual={label,leader,anchor,baseLatLng:L.latLng(dxPos[0],dxPos[1]),last:s.ts};
+   mapByCall.set(s.dx,visual);
+ }else{
+   visual.last=s.ts;
+   visual.baseLatLng=L.latLng(dxPos[0],dxPos[1]);
+   visual.anchor.setLatLng(dxPos);
+   visual.label.setIcon(createSpotLabel(s));
+ }
+
+ layoutMapLabels();
+}
+
+function addSpot(raw){
+ const s=normalizeSpot(raw);if(!valid(s))return false;
+ totalSpots++;lastSpotAt=Date.now();spots.unshift(s);if(spots.length>200)spots.length=200;
+ const prev=active.get(s.dx)||{first:s.ts,best:-999,spotters:new Map()};
+ prev.last=s.ts;
+ prev.freq=s.freq;
+ prev.wpm=s.wpm;
+ prev.type=s.type;
+ prev.best=Math.max(prev.best,s.snr);
+ prev.spotters.set(s.spotter,s.ts);
+ prev.lastSpot=s;
+ active.set(s.dx,prev);
+ drawMapSpot(s);render();return true
+}
+
+
+function rectsOverlap(a,b,pad=8){
+ return !(a.right+pad<=b.left || a.left>=b.right+pad || a.bottom+pad<=b.top || a.top>=b.bottom+pad);
+}
+
+function layoutMapLabels(){
+ const occupied=[];
+ const candidates=[
+   [0,-50],[78,-46],[-78,-46],[84,34],[-84,34],[0,54],
+   [145,-42],[-145,-42],[145,42],[-145,42],[0,-96],[0,96],
+   [210,0],[-210,0],[150,-96],[-150,-96],[150,96],[-150,96]
+ ];
+
+ // Las más relevantes obtienen primero los lugares más próximos al punto real.
+ const ordered=[...mapByCall.entries()].sort((a,b)=>{
+   const va=active.get(a[0]),vb=active.get(b[0]);
+   const sa=va?va.spotters.size:0,sb=vb?vb.spotters.size:0;
+   if(sb!==sa)return sb-sa;
+   return (vb?.last||0)-(va?.last||0);
+ });
+
+ for(const [call,visual] of ordered){
+   const base=map.latLngToLayerPoint(visual.baseLatLng);
+   let chosen=candidates[candidates.length-1];
+   let chosenRect=null;
+
+   for(const [ox,oy] of candidates){
+     const cx=base.x+ox,cy=base.y+oy;
+     const rect={left:cx-68,right:cx+68,top:cy-25,bottom:cy+25};
+     if(!occupied.some(r=>rectsOverlap(rect,r,10))){
+       chosen=[ox,oy];chosenRect=rect;break;
+     }
+   }
+
+   if(!chosenRect){
+     const [ox,oy]=chosen,cx=base.x+ox,cy=base.y+oy;
+     chosenRect={left:cx-68,right:cx+68,top:cy-25,bottom:cy+25};
+   }
+
+   occupied.push(chosenRect);
+   const labelPoint=L.point(base.x+chosen[0],base.y+chosen[1]);
+   const labelLatLng=map.layerPointToLatLng(labelPoint);
+   visual.label.setLatLng(labelLatLng);
+   visual.leader.setLatLngs([visual.baseLatLng,labelLatLng]);
+ }
+}
+
+function pruneMap(){
+ const now=Date.now();
+
+ // Cada recepción deja una traza que pierde opacidad con el tiempo.
+ for(let i=mapObjects.length-1;i>=0;i--){
+   const o=mapObjects[i],age=now-o.ts;
+   if(age>=ACTIVE_MS){
+     map.removeLayer(o.trail);
+     map.removeLayer(o.spotterDot);
+     mapObjects.splice(i,1);
+   }else{
+     const opacity=Math.max(0,1-age/ACTIVE_MS);
+     o.trail.setStyle({opacity:.72*opacity});
+     o.spotterDot.setStyle({opacity:.7*opacity,fillOpacity:.55*opacity});
+   }
+ }
+
+ // Una sola etiqueta por CALL. Fade lineal desde el último CQ y desaparición a 10 min.
+ for(const [call,visual] of mapByCall){
+   const v=active.get(call);
+   if(!v || now-v.last>=ACTIVE_MS){
+     map.removeLayer(visual.label);
+     map.removeLayer(visual.leader);
+     map.removeLayer(visual.anchor);
+     mapByCall.delete(call);
+     continue;
+   }
+
+   const age=now-v.last;
+   const opacity=Math.max(0,1-age/ACTIVE_MS);
+   const el=visual.label.getElement();
+   if(el){
+     el.style.opacity=opacity;
+     const ageEl=el.querySelector("[data-age]");
+     if(ageEl)ageEl.textContent=ageText(age);
+   }
+   visual.leader.setStyle({opacity:.55*opacity});
+   visual.anchor.setStyle({opacity:opacity,fillOpacity:.9*opacity});
+ }
+
+ layoutMapLabels();
+}
+function prune(){
+ const now=Date.now();
+ for(const[k,v]of active){
+   for(const [spotter,ts] of v.spotters){
+     if(now-ts>ACTIVE_MS)v.spotters.delete(spotter);
+   }
+   if(now-v.last>ACTIVE_MS || v.spotters.size===0)active.delete(k);
+ }
+ pruneMap();renderActivity();renderDial();renderFeed();renderMapStatus()
+}
+function renderMapStatus(){
+ document.getElementById("mapStatus").textContent=active.size?`${active.size} señales activas`:"Esperando actividad…"
+}
+function renderActivity(){
+ const el=document.getElementById("decodeStream");
+ const now=Date.now();
+
+ // Cobertura regional real:
+ // 1) más spotters únicos = mayor prioridad
+ // 2) a igualdad de spotters, el más reciente primero
+ const rows=[...active.entries()]
+   .map(([call,v])=>[call,v,now-v.last])
+   .sort((a,b)=>{
+     const spotterDiff=b[1].spotters.size-a[1].spotters.size;
+     if(spotterDiff!==0) return spotterDiff;
+     return b[1].last-a[1].last;
+   });
+
+ if(!rows.length){
+   el.innerHTML='<div class="empty">Esperando actividad CW…</div>';
+   return;
+ }
+
+ el.innerHTML=rows.map(([call,v,age])=>{
+   const info=prefixInfo(call);
+   const opacity=Math.max(0,1-age/ACTIVE_MS);
+
+   return `<div class="decode-item" style="opacity:${opacity}">
+     <div class="flag">${info.flag}</div>
+     <div class="decode-main">
+       <div class="decode-call">${call}</div>
+       <div class="decode-meta">
+         ${v.spotters.size} spotter${v.spotters.size===1?"":"s"} ·
+         ${v.lastSpot.snr>=0?"+":""}${v.lastSpot.snr} dB ·
+         ${v.lastSpot.wpm||"—"} WPM
+       </div>
+     </div>
+     <div class="decode-right">
+       <div class="decode-freq">${v.freq.toFixed(1)}</div>
+       <div class="decode-age">${ageText(age)}</div>
+     </div>
+   </div>`;
+ }).join("");
+}
+function renderFeed(){
+ const body=document.getElementById("feedBody");
+ const now=Date.now();
+ body.innerHTML=spots
+   .filter(s=>now-s.ts<ACTIVE_MS)
+   .slice(0,120)
+   .map((s,idx)=>{
+      const di=prefixInfo(s.dx),si=prefixInfo(s.spotter),t=new Date(s.ts).toISOString().slice(11,19);
+      const opacity=Math.max(0,1-(now-s.ts)/ACTIVE_MS);
+      return `<tr class="${idx===0?"new":""}" style="opacity:${opacity}"><td>${t}</td><td class="callcell">${di.flag} ${s.dx}</td><td class="freqcell">${s.freq.toFixed(1)}</td><td>${s.snr>=0?"+":""}${s.snr} dB</td><td>${s.wpm||"—"}</td><td>${si.flag} ${s.spotter}</td><td>${si.country} → ${di.country}</td><td class="hide-mobile">${s.type}</td></tr>`
+   }).join("")
+}
+function renderDial(){
+ const DIAL_MIN=7000,DIAL_MAX=7060;
+ const centerPct=(7033-DIAL_MIN)/(DIAL_MAX-DIAL_MIN)*100;
+ document.getElementById("dialCenter").style.left=centerPct+"%";
+
+ const el=document.getElementById("dialSpots");
+ const entries=[...active.entries()]
+   .filter(([call,v])=>v.freq>=DIAL_MIN&&v.freq<=DIAL_MAX)
+   .sort((a,b)=>a[1].freq-b[1].freq);
+
+ const laneLast=[-999,-999,-999];
+ el.innerHTML=entries.map(([call,v])=>{
+   const pct=Math.max(0,Math.min(100,(v.freq-DIAL_MIN)/(DIAL_MAX-DIAL_MIN)*100));
+   let lane=0;
+   for(let i=0;i<laneLast.length;i++){
+     if(pct-laneLast[i]>8){lane=i;break}
+     if(i===laneLast.length-1) lane=(laneLast.indexOf(Math.min(...laneLast))>=0?laneLast.indexOf(Math.min(...laneLast)):0);
+   }
+   laneLast[lane]=pct;
+   const top=24+lane*18;
+   const opacity=Math.max(0,1-(Date.now()-v.last)/ACTIVE_MS);
+   return `<div class="dial-spot" style="left:${pct}%;top:${top}px;opacity:${opacity}" title="${call} ${v.freq.toFixed(1)}">${call}</div>`
+ }).join("")
+}
+function render(){renderActivity();renderFeed();renderDial();renderMapStatus()}
+
+setInterval(()=>{
+ document.getElementById("utcClock").textContent=new Date().toISOString().slice(11,19)+" UTC";
+ prune()
+},1000);
+
+
+// ---- LIVE RBN INPUT ---------------------------------------------------------
+// GitHub Pages cannot open telnet.reversebeacon.net:7000 directly.
+// Set this to the public WSS URL of the tiny relay included with this package.
+const RBN_WS_URL = window.CW_LATAM_WS_URL || "";
+
+let rbnSocket=null;
+let reconnectTimer=null;
+
+function setLiveState(text){
+ const el=document.getElementById("liveState");
+ if(el) el.textContent=text;
+}
+
+function connectRBN(){
+ if(!RBN_WS_URL){
+   setLiveState("RBN OFFLINE");
+   return;
+ }
+ try{
+   setLiveState("CONNECTING");
+   rbnSocket=new WebSocket(RBN_WS_URL);
+
+   rbnSocket.onopen=()=>setLiveState("RBN LIVE");
+
+   rbnSocket.onmessage=(ev)=>{
+     try{
+       const payload=JSON.parse(ev.data);
+       if(payload && payload.type==="status") return;
+       if(Array.isArray(payload)) payload.forEach(addSpot);
+       else addSpot(payload);
+     }catch(err){
+       console.warn("RBN message ignored:",err);
+     }
+   };
+
+   rbnSocket.onerror=()=>setLiveState("RBN ERROR");
+
+   rbnSocket.onclose=()=>{
+     setLiveState("RBN OFFLINE");
+     clearTimeout(reconnectTimer);
+     reconnectTimer=setTimeout(connectRBN,5000);
+   };
+ }catch(err){
+   setLiveState("RBN ERROR");
+   clearTimeout(reconnectTimer);
+   reconnectTimer=setTimeout(connectRBN,5000);
+ }
+}
+
+window.CWLATAM={
+ ingest: addSpot,
+ connect: connectRBN
+};
+
+connectRBN();
+
+</script>
+</body>
+</html>
