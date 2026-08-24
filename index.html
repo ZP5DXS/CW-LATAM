@@ -74,7 +74,7 @@ body{min-height:100vh}
 .dial-center:after{content:"7033";position:absolute;top:-1px;left:50%;transform:translate(-50%,-100%);font:700 9px ui-monospace,monospace;color:var(--amber)}
 .dial-labels{position:absolute;left:0;right:0;bottom:4px;display:flex;justify-content:space-between;padding:0 8px;color:#648370;font:8px ui-monospace,monospace}
 .dial-spots{position:absolute;inset:0}
-.dial-spot{position:absolute;top:26px;transform:translateX(-50%);font:800 9px ui-monospace,monospace;color:var(--green);white-space:nowrap;transition:opacity .5s}
+.dial-spot{position:absolute;top:26px;transform:translateX(-50%);font:900 12px ui-monospace,monospace;color:var(--green);white-space:nowrap;transition:opacity .5s}
 .dial-spot:before{content:"";display:block;margin:auto;width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
 
 .feed{grid-column:1/-1}
@@ -149,6 +149,27 @@ tr.channel-row .callcell,tr.channel-row .freqcell{color:#ff6666!important;font-w
   50%{filter:brightness(1.45);opacity:.78}
 }
 
+
+.map-focus-toggle{
+  position:absolute;left:14px;top:142px;z-index:500;display:flex;gap:5px;
+  background:rgba(4,13,8,.86);border:1px solid #173426;border-radius:10px;padding:5px
+}
+.map-focus-toggle button{
+  border:0;border-radius:7px;padding:7px 10px;background:transparent;color:#789a86;
+  font:800 9px ui-sans-serif,system-ui;letter-spacing:.08em;cursor:pointer
+}
+.map-focus-toggle button.active{background:#123120;color:#dff7e6}
+.focus-cross{
+  display:none;position:absolute;left:50%;top:50%;width:30px;height:30px;
+  transform:translate(-50%,-50%);z-index:499;pointer-events:none
+}
+.focus-cross:before,.focus-cross:after{
+  content:"";position:absolute;background:#f1f5f2;opacity:.75;box-shadow:0 0 8px rgba(255,255,255,.2)
+}
+.focus-cross:before{left:14px;top:0;width:1px;height:30px}
+.focus-cross:after{top:14px;left:0;height:1px;width:30px}
+.focus-cross.show{display:block}
+
 </style>
 </head>
 <body>
@@ -159,7 +180,7 @@ tr.channel-row .callcell,tr.channel-row .freqcell{color:#ff6666!important;font-w
     <div><h1>CW LATAM LIVE</h1><small>40M RADAR · SOUTH AMERICA</small></div>
   </div>
   <div class="statuses">
-    <span class="pill live"><span class="dot"></span><span id="liveState">RBN OFFLINE</span></span>
+    <span class="pill live"><span class="dot"></span><span id="liveState">OFFLINE</span></span>
     <span class="pill">40m · CW</span>
     <span class="pill">OPEN SOURCE</span>
   </div>
@@ -179,6 +200,11 @@ tr.channel-row .callcell,tr.channel-row .freqcell{color:#ff6666!important;font-w
 
     <div class="map-badge"><b>● CW RADAR</b><br><span id="mapStatus">Esperando actividad…</span></div>
 
+    <div class="map-focus-toggle">
+      <button type="button" id="globalBtn" class="active">GLOBAL</button>
+      <button type="button" id="focusBtn">FOCUS</button>
+    </div>
+    <div class="focus-cross" id="focusCross"></div>
     <div class="legend">
       <span><i style="background:#58ff92"></i>LATAM</span>
       <span><i style="background:#ffc85c"></i>DX</span>
@@ -191,7 +217,7 @@ tr.channel-row .callcell,tr.channel-row .freqcell{color:#ff6666!important;font-w
       <div class="dial-note">40M CW DIAL</div>
     </div>
     <div class="dial-scale">
-      <div class="dial-center" id="dialCenter"></div>
+      
       <div class="dial-spots" id="dialSpots"></div>
       <div class="dial-labels"><span>7.000</span><span>7.010</span><span>7.020</span><span>7.030</span><span>7.040</span><span>7.050</span><span>7.060</span></div>
     </div>
@@ -221,7 +247,7 @@ tr.channel-row .callcell,tr.channel-row .freqcell{color:#ff6666!important;font-w
 </main>
 
 <footer class="footer">
-  <span>Data source: Reverse Beacon Network · 40 m CW</span>
+  <span>40 m CW · Open source live radar</span>
   <span>Tags and traces fade out after 10 minutes</span>
 </footer>
 </div>
@@ -374,6 +400,7 @@ function addSpot(raw){
  prev.wpm=s.wpm;
  prev.type=s.type;
  prev.best=Math.max(prev.best,s.snr);
+ prev.totalSpots=(prev.totalSpots||0)+1;
  prev.spotters.set(s.spotter,s.ts);
  prev.lastSpot=s;
  active.set(s.dx,prev);
@@ -482,6 +509,36 @@ function prune(){
 function renderMapStatus(){
  document.getElementById("mapStatus").textContent=active.size?`${active.size} señales activas`:"Esperando actividad…"
 }
+let focusMode=false;
+
+function focusMetrics(v){
+ const center=map.getCenter();
+ let weighted=0;
+ let visible=0;
+
+ for(const [spotter] of v.spotters){
+   const p=prefixInfo(spotter);
+   const ll=L.latLng(p.lat,p.lon);
+   const km=map.distance(center,ll)/1000;
+   if(map.getBounds().contains(ll)) visible++;
+   weighted += 1 / (1 + km/700);
+ }
+
+ return {weighted,visible};
+}
+
+function setFocusMode(on){
+ focusMode=Boolean(on);
+ document.getElementById("globalBtn").classList.toggle("active",!focusMode);
+ document.getElementById("focusBtn").classList.toggle("active",focusMode);
+ document.getElementById("focusCross").classList.toggle("show",focusMode);
+ renderActivity();
+}
+
+document.getElementById("globalBtn").addEventListener("click",()=>setFocusMode(false));
+document.getElementById("focusBtn").addEventListener("click",()=>setFocusMode(true));
+map.on("moveend zoomend",()=>{ if(focusMode) renderActivity(); });
+
 function renderActivity(){
  const el=document.getElementById("decodeStream");
  const now=Date.now();
@@ -490,14 +547,34 @@ function renderActivity(){
  // 1) más spotters únicos = mayor prioridad
  // 2) a igualdad de spotters, el más reciente primero
  const rows=[...active.entries()]
-   .map(([call,v])=>[call,v,now-v.last])
+   .map(([call,v])=>{
+     const fm=focusMetrics(v);
+     return [call,v,now-v.last,fm];
+   })
    .sort((a,b)=>{
+     // 1. Canal 7033: prioridad absoluta.
      if(Boolean(b[1].isChannel)!==Boolean(a[1].isChannel)){
        return b[1].isChannel ? 1 : -1;
      }
+
+     // 2. En FOCUS manda primero la cobertura alrededor del centro del mapa.
+     if(focusMode){
+       const visibleDiff=b[3].visible-a[3].visible;
+       if(visibleDiff!==0)return visibleDiff;
+       const weightedDiff=b[3].weighted-a[3].weighted;
+       if(Math.abs(weightedDiff)>0.001)return weightedDiff;
+     }
+
+     // 3. Cobertura regional: cantidad de spotters únicos.
      const spotterDiff=b[1].spotters.size-a[1].spotters.size;
      if(spotterDiff!==0)return spotterDiff;
-     return b[1].last-a[1].last;
+
+     // 4. Recencia: una señal viva pesa más que repeticiones antiguas.
+     const recentDiff=b[1].last-a[1].last;
+     if(recentDiff!==0)return recentDiff;
+
+     // 5. Spots repetidos: sólo desempate final.
+     return (b[1].totalSpots||0)-(a[1].totalSpots||0);
    });
 
  if(!rows.length){
@@ -505,7 +582,7 @@ function renderActivity(){
    return;
  }
 
- el.innerHTML=rows.map(([call,v,age])=>{
+ el.innerHTML=rows.map(([call,v,age,fm])=>{
    const info=prefixInfo(call);
    const opacity=Math.max(0,1-age/ACTIVE_MS);
 
@@ -514,7 +591,7 @@ function renderActivity(){
      <div class="decode-main">
        <div class="decode-call">${call}${v.isChannel?'<span class="channel-badge">7033 CHANNEL</span>':""}</div>
        <div class="decode-meta">
-         ${v.spotters.size} spotter${v.spotters.size===1?"":"s"} ·
+         ${focusMode?`${fm.visible} focus · `:""}${v.spotters.size} spotter${v.spotters.size===1?"":"s"} ·
          ${v.lastSpot.snr>=0?"+":""}${v.lastSpot.snr} dB ·
          ${v.lastSpot.wpm||"—"} WPM
        </div>
@@ -540,8 +617,6 @@ function renderFeed(){
 }
 function renderDial(){
  const DIAL_MIN=7000,DIAL_MAX=7060;
- const centerPct=(7033-DIAL_MIN)/(DIAL_MAX-DIAL_MIN)*100;
- document.getElementById("dialCenter").style.left=centerPct+"%";
 
  const el=document.getElementById("dialSpots");
  const entries=[...active.entries()]
@@ -585,19 +660,23 @@ function setLiveState(text){
 
 function connectRBN(){
  if(!RBN_WS_URL){
-   setLiveState("RBN OFFLINE");
+   setLiveState("OFFLINE");
    return;
  }
  try{
    setLiveState("CONNECTING");
    rbnSocket=new WebSocket(RBN_WS_URL);
 
-   rbnSocket.onopen=()=>setLiveState("RBN LIVE");
+   rbnSocket.onopen=()=>setLiveState("LIVE");
 
    rbnSocket.onmessage=(ev)=>{
      try{
        const payload=JSON.parse(ev.data);
        if(payload && payload.type==="status") return;
+       if(payload && payload.type==="history" && Array.isArray(payload.spots)){
+         payload.spots.forEach(addSpot);
+         return;
+       }
        if(Array.isArray(payload)) payload.forEach(addSpot);
        else addSpot(payload);
      }catch(err){
@@ -605,15 +684,15 @@ function connectRBN(){
      }
    };
 
-   rbnSocket.onerror=()=>setLiveState("RBN ERROR");
+   rbnSocket.onerror=()=>setLiveState("ERROR");
 
    rbnSocket.onclose=()=>{
-     setLiveState("RBN OFFLINE");
+     setLiveState("OFFLINE");
      clearTimeout(reconnectTimer);
      reconnectTimer=setTimeout(connectRBN,5000);
    };
  }catch(err){
-   setLiveState("RBN ERROR");
+   setLiveState("ERROR");
    clearTimeout(reconnectTimer);
    reconnectTimer=setTimeout(connectRBN,5000);
  }
