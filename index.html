@@ -521,7 +521,7 @@ setInterval(()=>{
 // ---- LIVE RBN INPUT ---------------------------------------------------------
 // GitHub Pages cannot open telnet.reversebeacon.net:7000 directly.
 // Set this to the public WSS URL of the tiny relay included with this package.
-const RBN_WS_URL = window.CW_LATAM_WS_URL || "";
+const RBN_WS_URL = window.CW_LATAM_WS_URL || "wss://cw-latam.onrender.com";
 
 let rbnSocket=null;
 let reconnectTimer=null;
