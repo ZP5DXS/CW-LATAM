@@ -1731,7 +1731,7 @@ body.has-profile .side-tabs{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.25-report-save-fix";
+const CWLATAM_BUILD="2026.08.25-vote-stable-snapshot";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -2139,7 +2139,7 @@ function networkMedianSnr(v){
 }
 
 let mapFocusSaveTimer=null;
-const EXPECTED_DB_SCHEMA="cwlatam-data-v1";
+const EXPECTED_DB_SCHEMA="cwlatam-data-v1.1";
 
 async function saveMapFocus(enabled=focusMode){
  if(!currentProfile||!sessionToken)return;
@@ -3082,39 +3082,27 @@ async function voteCall(call,rating){
 
  const snapshot=networkSnapshot(v);
 
- // IMPORTANTE:
- // El guardado en DB y el refresco visual se manejan por separado.
- // Así un fallo de ranking/recompensas/UI no puede mostrarse como
- // "Error al guardar" cuando el reporte sí llegó correctamente.
+ // Camino crítico: usamos nuevamente cw_vote(), que ya era estable
+ // y maneja contador, temporadas, predicciones/eventos y respuesta UI.
  let data=null;
 
  try{
-   const result=await sb.rpc("cw_vote_v2",{
+   const {data:voteData,error}=await sb.rpc("cw_vote",{
      p_token:sessionToken,
      p_dx_call:call,
      p_frequency:Number(v.actualFreq||v.freq),
      p_rating:rating,
      p_snr:networkMedianSnr(v),
      p_spotter_count:snapshot.length,
-     p_spot_seq:Number(v.lastSpot?.seq||0)||null,
-     p_network_snapshot:snapshot
+     p_spot_seq:Number(v.lastSpot?.seq||0)||null
    });
 
-   if(result.error){
-     console.error("CW LATAM · cw_vote_v2 ERROR",{
-       call,
-       rating,
-       error:result.error,
-       snapshotCount:snapshot.length
-     });
-     throw result.error;
+   if(error){
+     console.error("CW LATAM · cw_vote ERROR",error);
+     throw error;
    }
 
-   data=result.data;
-
-   if(!data || data.ok===false){
-     console.warn("CW LATAM · cw_vote_v2 respuesta inesperada",data);
-   }
+   data=voteData;
 
  }catch(err){
    console.error("CW LATAM · reporte NO guardado",err);
@@ -3122,8 +3110,7 @@ async function voteCall(call,rating){
    return;
  }
 
- // Desde este punto el RPC terminó sin error:
- // consideramos el reporte guardado aunque falle algún refresco secundario.
+ // A partir de acá el voto principal YA está confirmado.
  votedCalls.set(String(call).toUpperCase(),Number(rating));
 
  if(data && typeof data==="object"){
@@ -3138,7 +3125,14 @@ async function voteCall(call,rating){
    }
  }
 
- // Feedback de éxito inmediatamente, sin depender de rankings/recompensas.
+ // Actualizamos inmediatamente para ocultar los botones.
+ try{
+   updateProfileUI();
+ }catch(err){
+   console.warn("CW LATAM · UI después del voto",err);
+   renderActivity();
+ }
+
  const votes=Number(currentProfile?.votes_count||0);
  const unlocked=Boolean(currentProfile?.focus_unlocked);
  const season=data?.season||null;
@@ -3152,15 +3146,24 @@ async function voteCall(call,rating){
    showToast(`${t("voteSaved")} · ${Math.min(100,votes)}/100`);
  }
 
- // Refrescos secundarios: ninguno puede convertir un guardado correcto en error.
- try{
-   updateProfileUI();
- }catch(err){
-   console.error("CW LATAM · updateProfileUI después del voto",err);
- }
+ // Snapshot: enriquecimiento secundario. NUNCA puede romper el voto.
+ void sb.rpc("cw_attach_network_snapshot",{
+   p_token:sessionToken,
+   p_dx_call:call,
+   p_network_snapshot:snapshot
+ }).then(({data:snapData,error:snapError})=>{
+   if(snapError){
+     console.warn("CW LATAM · snapshot no guardado",snapError);
+   }else if(!snapData?.saved){
+     console.warn("CW LATAM · snapshot sin voto objetivo",snapData);
+   }
+ }).catch(err=>{
+   console.warn("CW LATAM · snapshot error",err);
+ });
 
+ // Refrescos secundarios.
  void loadSeasonData().catch?.(err=>{
-   console.error("CW LATAM · loadSeasonData después del voto",err);
+   console.warn("CW LATAM · temporada después del voto",err);
  });
 
  if(data?.counted && votes>0 && votes%10===0){
