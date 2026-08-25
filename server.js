@@ -6,7 +6,6 @@ const PORT = Number(process.env.PORT || 3000);
 
 const RBN_HOST = "telnet.reversebeacon.net";
 const RBN_PORT = 7000;
-
 const RBN_LOGIN = String(
   process.env.RBN_LOGIN || "ZP5DXS"
 ).trim();
@@ -14,19 +13,10 @@ const RBN_LOGIN = String(
 const HISTORY_MS = 10 * 60 * 1000;
 
 const RBN_WATCHDOG_MS = 90 * 1000;
-
 const WS_HEARTBEAT_MS = 20 * 1000;
-
-/*
- * Heartbeat visible para JavaScript.
- *
- * Este mensaje SÍ llega a onmessage()
- * del navegador.
- */
 const APP_HEARTBEAT_MS = 15 * 1000;
 
 const clients = new Set();
-
 const history = [];
 
 let rbn = null;
@@ -36,18 +26,24 @@ let reconnectTimer = null;
 let lastRbnDataAt = 0;
 let rbnConnected = false;
 
+/*
+ * Número secuencial de cada spot.
+ * Permite al navegador pedir:
+ *
+ * "dame solamente lo posterior al spot 1234"
+ */
+let spotSequence = 0;
+
 
 /*
- * Spotters de Sudamérica.
+ * SPOTTERS SUDAMÉRICA
  */
 const SA_PREFIXES = [
-
   "LU", "LW", "AY", "AZ",
   "LO", "LP", "LQ", "LR",
   "LS", "LT", "LV",
 
   "CX",
-
   "ZP",
 
   "PY", "PP", "PQ", "PR",
@@ -58,7 +54,6 @@ const SA_PREFIXES = [
   "CD", "XQ",
 
   "OA", "OB",
-
   "CP",
 
   "HC", "HD",
@@ -68,13 +63,10 @@ const SA_PREFIXES = [
   "HK", "HJ",
 
   "FY",
-
   "8R",
-
   "PZ",
 
   "9Y", "9Z",
-
   "P4",
 
   "PJ2", "PJ4", "PJ9",
@@ -84,229 +76,139 @@ const SA_PREFIXES = [
 
 
 function cleanCall(call) {
-
   return String(call || "")
     .toUpperCase()
     .replace(/-#$/, "")
     .trim();
-
 }
 
 
 function isSouthAmericaSpotter(call) {
-
-  const c =
-    cleanCall(call);
+  const c = cleanCall(call);
 
   return SA_PREFIXES.some(
-    prefix =>
-      c.startsWith(prefix)
+    prefix => c.startsWith(prefix)
   );
-
 }
 
 
 /*
- * Broadcast a todos los navegadores.
+ * BROADCAST WEBSOCKET
  */
 function broadcast(obj) {
-
-  const data =
-    JSON.stringify(obj);
-
+  const data = JSON.stringify(obj);
 
   for (const ws of clients) {
-
-    if (
-      ws.readyState === 1
-    ) {
-
+    if (ws.readyState === 1) {
       try {
-
         ws.send(data);
-
       } catch (error) {
-
         console.error(
           "WebSocket send:",
           error.message
         );
-
       }
-
     }
-
   }
-
 }
 
 
 /*
- * HISTORIAL
+ * HISTORIAL 10 MIN
  */
 function pruneHistory() {
-
   const cutoff =
-    Date.now() -
-    HISTORY_MS;
-
+    Date.now() - HISTORY_MS;
 
   while (
     history.length &&
     history[0].ts < cutoff
   ) {
-
     history.shift();
-
   }
-
 }
 
 
 function rememberSpot(spot) {
-
   history.push(spot);
-
   pruneHistory();
-
 }
 
 
 /*
- * PARSER
- *
- * Formato real:
- *
- * DX de WC2L-#: 7031.50 N9FGC
- * CW 5 dB 18 WPM CQ 2319Z
+ * PARSER RBN
  */
 function parseRbnLine(raw) {
+  const line = String(raw || "")
+    .replace(/\r/g, "")
+    .trim();
 
-  const line =
-    String(raw || "")
-      .replace(/\r/g, "")
-      .trim();
-
-
-  const match =
-    line.match(
-      /^DX de\s+([^:]+):\s+([0-9.]+)\s+(\S+)\s+(CW)\s+(-?\d+)\s+dB\s+(\d+)\s+WPM\s+(.+?)\s+([0-2]\d[0-5]\d)Z$/i
-    );
-
+  const match = line.match(
+    /^DX de\s+([^:]+):\s+([0-9.]+)\s+(\S+)\s+(CW)\s+(-?\d+)\s+dB\s+(\d+)\s+WPM\s+(.+?)\s+([0-2]\d[0-5]\d)Z$/i
+  );
 
   if (!match) {
-
     return null;
-
   }
 
-
   const spotter =
-    cleanCall(
-      match[1]
-    );
-
+    cleanCall(match[1]);
 
   const actualFreq =
-    Number(
-      match[2]
-    );
-
+    Number(match[2]);
 
   const dx =
-    cleanCall(
-      match[3]
-    );
-
+    cleanCall(match[3]);
 
   const mode =
-    match[4]
-      .toUpperCase();
-
+    match[4].toUpperCase();
 
   const snr =
-    Number(
-      match[5]
-    );
-
+    Number(match[5]);
 
   const wpm =
-    Number(
-      match[6]
-    );
-
+    Number(match[6]);
 
   const activity =
     match[7]
       .trim()
       .toUpperCase();
 
-
   const rbnUtc =
     match[8];
 
 
   /*
-   * CW únicamente.
+   * FILTROS
    */
-  if (
-    mode !== "CW"
-  ) {
-
+  if (mode !== "CW") {
     return null;
-
   }
 
-
-  /*
-   * Solamente CQ.
-   */
-  if (
-    activity !== "CQ"
-  ) {
-
+  if (activity !== "CQ") {
     return null;
-
   }
 
-
-  /*
-   * Banda 40 metros.
-   */
   if (
     actualFreq < 7000 ||
     actualFreq > 7300
   ) {
-
     return null;
-
   }
 
-
-  /*
-   * Spotter Sudamérica.
-   */
   if (
-    !isSouthAmericaSpotter(
-      spotter
-    )
+    !isSouthAmericaSpotter(spotter)
   ) {
-
     return null;
-
   }
 
 
   /*
-   * Canal LXCW QRS
-   *
-   * ±100 Hz alrededor
-   * de 7033.
+   * CANAL 7033
    */
   const isChannel =
     actualFreq >= 7032.9 &&
     actualFreq <= 7033.1;
-
 
   const freq =
     isChannel
@@ -314,7 +216,15 @@ function parseRbnLine(raw) {
       : actualFreq;
 
 
+  /*
+   * Secuencia monotónica.
+   */
+  spotSequence++;
+
+
   return {
+    seq:
+      spotSequence,
 
     source:
       "RBN",
@@ -343,70 +253,48 @@ function parseRbnLine(raw) {
       "CW",
 
     rbnUtc
-
   };
-
 }
 
 
 /*
- * Programa reconexión RBN.
+ * RECONEXIÓN RBN
  */
 function scheduleRbnReconnect() {
-
-  clearTimeout(
-    reconnectTimer
-  );
-
+  clearTimeout(reconnectTimer);
 
   reconnectTimer =
     setTimeout(
       connectRbn,
       3000
     );
-
 }
 
 
 /*
- * CONEXIÓN TELNET
+ * TELNET
  */
 function connectRbn() {
-
-  clearTimeout(
-    reconnectTimer
-  );
-
+  clearTimeout(reconnectTimer);
 
   buffer = "";
-
   rbnConnected = false;
-
 
   console.log(
     `Conectando ${RBN_HOST}:${RBN_PORT} como ${RBN_LOGIN}...`
   );
 
 
-  rbn =
-    net.createConnection({
+  rbn = net.createConnection({
+    host:
+      RBN_HOST,
 
-      host:
-        RBN_HOST,
-
-      port:
-        RBN_PORT
-
-    });
+    port:
+      RBN_PORT
+  });
 
 
-  /*
-   * Evitamos buffering innecesario.
-   */
-  rbn.setNoDelay(
-    true
-  );
-
+  rbn.setNoDelay(true);
 
   rbn.setKeepAlive(
     true,
@@ -418,7 +306,8 @@ function connectRbn() {
     "connect",
     () => {
 
-      rbnConnected = true;
+      rbnConnected =
+        true;
 
       lastRbnDataAt =
         Date.now();
@@ -429,9 +318,6 @@ function connectRbn() {
       );
 
 
-      /*
-       * Login.
-       */
       setTimeout(
         () => {
 
@@ -439,12 +325,10 @@ function connectRbn() {
             rbn &&
             !rbn.destroyed
           ) {
-
             rbn.write(
               RBN_LOGIN +
               "\r\n"
             );
-
           }
 
         },
@@ -456,7 +340,7 @@ function connectRbn() {
 
 
   /*
-   * DATOS RBN
+   * STREAM RBN
    */
   rbn.on(
     "data",
@@ -473,15 +357,9 @@ function connectRbn() {
 
 
       const lines =
-        buffer.split(
-          /\n/
-        );
+        buffer.split(/\n/);
 
 
-      /*
-       * Posible línea
-       * incompleta.
-       */
       buffer =
         lines.pop() ||
         "";
@@ -493,20 +371,16 @@ function connectRbn() {
       ) {
 
         const spot =
-          parseRbnLine(
-            line
-          );
+          parseRbnLine(line);
 
 
         if (!spot) {
-
           continue;
-
         }
 
 
         /*
-         * Guardamos.
+         * Primero memoria.
          */
         rememberSpot(
           spot
@@ -514,8 +388,8 @@ function connectRbn() {
 
 
         /*
-         * Enviamos INMEDIATAMENTE
-         * a todos los navegadores.
+         * Después WebSocket
+         * inmediatamente.
          */
         broadcast(
           spot
@@ -529,21 +403,13 @@ function connectRbn() {
 
 
         console.log(
-
-          `LIVE ` +
-
+          `LIVE #${spot.seq} ` +
           `${spot.spotter} -> ` +
-
           `${spot.dx} ` +
-
           `${spot.actualFreq.toFixed(2)} ` +
-
           `${spot.snr} dB ` +
-
           `${spot.wpm} WPM` +
-
           mark
-
         );
 
       }
@@ -588,12 +454,6 @@ function connectRbn() {
 
 /*
  * WATCHDOG RBN
- *
- * Si la conexión TCP queda
- * abierta pero no entrega
- * absolutamente ningún dato
- * durante 90 segundos,
- * forzamos reconexión.
  */
 setInterval(
   () => {
@@ -603,9 +463,7 @@ setInterval(
       rbn.destroyed ||
       !rbnConnected
     ) {
-
       return;
-
     }
 
 
@@ -620,19 +478,13 @@ setInterval(
     ) {
 
       console.warn(
-        "RBN sin datos durante 90 s. Reconectando..."
+        "RBN sin datos 90 s. Reconectando..."
       );
 
 
       try {
-
         rbn.destroy();
-
-      } catch (error) {
-
-        // Ignorar.
-
-      }
+      } catch (_) {}
 
     }
 
@@ -642,15 +494,115 @@ setInterval(
 
 
 /*
- * SERVIDOR HTTP
+ * CORS
+ */
+function corsHeaders(extra = {}) {
+  return {
+    "access-control-allow-origin":
+      "*",
+
+    "cache-control":
+      "no-store, no-cache, must-revalidate",
+
+    ...extra
+  };
+}
+
+
+/*
+ * HTTP
  */
 const server =
   http.createServer(
     (req, res) => {
 
+      const url =
+        new URL(
+          req.url,
+          `http://${req.headers.host || "localhost"}`
+        );
 
+
+      /*
+       * ENDPOINT DE SPOTS
+       *
+       * Ej:
+       *
+       * /spots?after=123
+       *
+       * Devuelve todo lo posterior
+       * al spot #123.
+       */
       if (
-        req.url ===
+        url.pathname ===
+        "/spots"
+      ) {
+
+        pruneHistory();
+
+
+        let after =
+          Number(
+            url.searchParams.get(
+              "after"
+            ) ||
+            0
+          );
+
+
+        if (
+          !Number.isFinite(after) ||
+          after < 0
+        ) {
+          after = 0;
+        }
+
+
+        const result =
+          history.filter(
+            spot =>
+              spot.seq >
+              after
+          );
+
+
+        res.writeHead(
+          200,
+          corsHeaders({
+            "content-type":
+              "application/json; charset=utf-8"
+          })
+        );
+
+
+        res.end(
+          JSON.stringify({
+
+            ok:
+              true,
+
+            spots:
+              result,
+
+            lastSeq:
+              spotSequence,
+
+            serverTime:
+              Date.now()
+
+          })
+        );
+
+
+        return;
+      }
+
+
+      /*
+       * HEALTH
+       */
+      if (
+        url.pathname ===
         "/health"
       ) {
 
@@ -659,18 +611,10 @@ const server =
 
         res.writeHead(
           200,
-          {
-
+          corsHeaders({
             "content-type":
-              "application/json",
-
-            "access-control-allow-origin":
-              "*",
-
-            "cache-control":
-              "no-store"
-
-          }
+              "application/json; charset=utf-8"
+          })
         );
 
 
@@ -689,12 +633,14 @@ const server =
             historySpots:
               history.length,
 
+            lastSeq:
+              spotSequence,
+
             historyMinutes:
               10,
 
             secondsSinceRbnData:
               lastRbnDataAt
-
                 ? Math.round(
                     (
                       Date.now() -
@@ -702,11 +648,7 @@ const server =
                     ) /
                     1000
                   )
-
                 : null,
-
-            filter:
-              "CW / CQ / 40m / South America",
 
             channel:
               "7032.9-7033.1"
@@ -716,21 +658,15 @@ const server =
 
 
         return;
-
       }
 
 
       res.writeHead(
         200,
-        {
-
+        corsHeaders({
           "content-type":
-            "text/plain; charset=utf-8",
-
-          "cache-control":
-            "no-store"
-
-        }
+            "text/plain; charset=utf-8"
+        })
       );
 
 
@@ -747,16 +683,10 @@ const server =
  */
 const wss =
   new WebSocketServer({
-
     server,
 
-    /*
-     * Mensajes diminutos.
-     * No necesitamos compresión.
-     */
     perMessageDeflate:
       false
-
   });
 
 
@@ -790,7 +720,7 @@ wss.on(
 
 
     /*
-     * Estado inicial.
+     * Estado.
      */
     ws.send(
       JSON.stringify({
@@ -809,7 +739,7 @@ wss.on(
 
 
     /*
-     * Historial 10 minutos.
+     * Historial.
      */
     pruneHistory();
 
@@ -821,7 +751,10 @@ wss.on(
           "history",
 
         spots:
-          history
+          history,
+
+        lastSeq:
+          spotSequence
 
       })
     );
@@ -860,10 +793,7 @@ wss.on(
 
 
 /*
- * HEARTBEAT WEBSOCKET
- *
- * Este es ping/pong
- * a nivel protocolo.
+ * HEARTBEAT PROTOCOLO
  */
 const websocketHeartbeat =
   setInterval(
@@ -879,20 +809,17 @@ const websocketHeartbeat =
           false
         ) {
 
-          console.warn(
-            "WebSocket congelado. Terminando."
-          );
-
-
           clients.delete(
             ws
           );
 
 
-          ws.terminate();
+          try {
+            ws.terminate();
+          } catch (_) {}
+
 
           continue;
-
         }
 
 
@@ -904,7 +831,7 @@ const websocketHeartbeat =
 
           ws.ping();
 
-        } catch (error) {
+        } catch (_) {
 
           clients.delete(
             ws
@@ -912,9 +839,7 @@ const websocketHeartbeat =
 
 
           try {
-
             ws.terminate();
-
           } catch (_) {}
 
         }
@@ -928,15 +853,6 @@ const websocketHeartbeat =
 
 /*
  * HEARTBEAT DE APLICACIÓN
- *
- * MUY IMPORTANTE.
- *
- * Esto sí llega al
- * JavaScript del navegador
- * mediante onmessage().
- *
- * La web espera recibir
- * algo al menos cada 40 s.
  */
 const applicationHeartbeat =
   setInterval(
@@ -951,7 +867,10 @@ const applicationHeartbeat =
           Date.now(),
 
         live:
-          rbnConnected
+          rbnConnected,
+
+        lastSeq:
+          spotSequence
 
       });
 
@@ -967,7 +886,6 @@ wss.on(
     clearInterval(
       websocketHeartbeat
     );
-
 
     clearInterval(
       applicationHeartbeat
