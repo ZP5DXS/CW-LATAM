@@ -1235,6 +1235,60 @@ html[data-theme="light"] .dial-hover-readout{background:rgba(248,251,249,.96)}
   }
 }
 
+
+/* ===== COMMUNITY 11 · TAB LOGIC / VOTE BUTTON FIX ===== */
+
+/* Votos: siempre una sola fila */
+.vote-row{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:4px!important;
+  flex-wrap:nowrap!important;
+  width:100%
+}
+.vote-btn{
+  min-width:0!important;
+  width:100%!important;
+  padding:5px 3px!important;
+  font-size:7px!important;
+  white-space:nowrap!important;
+  overflow:hidden;
+  text-overflow:ellipsis
+}
+.vote-btn .sig{flex:0 0 6px}
+
+/* Actividad limpia para usuarios identificados */
+.rank-glance.hidden-for-member{display:none!important}
+
+/* Recompensas visibles desde login */
+#tabRewards{display:none}
+body.has-profile #tabRewards{display:block!important}
+
+.rewards-locked{
+  padding:14px 12px;
+  text-align:center
+}
+.rewards-locked-icon{font-size:24px}
+.rewards-locked-title{
+  margin-top:6px;
+  font-size:12px;
+  font-weight:900
+}
+.rewards-locked-sub{
+  margin-top:4px;
+  color:var(--muted);
+  font-size:8px;
+  line-height:1.4
+}
+.rewards-locked .season-progress{margin-top:12px}
+
+@media(max-width:700px){
+  .vote-btn{
+    padding:5px 2px!important;
+    font-size:6.5px!important
+  }
+}
+
 </style>
 </head>
 <body>
@@ -1377,8 +1431,15 @@ html[data-theme="light"] .dial-hover-readout{background:rgba(248,251,249,.96)}
     <div class="stats-view-head">
       <div>
         <div class="panel-title">🏅 RECOMPENSAS</div>
-        <div class="panel-sub">50 reportes por estación</div>
+        <div class="panel-sub" id="rewardsSubtitle">Participación CW LATAM</div>
       </div>
+    </div>
+
+    <div class="rewards-locked" id="rewardsLocked" style="display:none">
+      <div class="rewards-locked-icon">🤖</div>
+      <div class="rewards-locked-title">DESBLOQUEÁ MI FOCO</div>
+      <div class="rewards-locked-sub" id="rewardsLockedText">—</div>
+      <div class="season-progress"><i id="focusUnlockProgress"></i></div>
     </div>
 
     <div class="rewards-panel-card" id="rewardsPanelCard">
@@ -1493,7 +1554,7 @@ html[data-theme="light"] .dial-hover-readout{background:rgba(248,251,249,.96)}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.25-community10-tabs";
+const CWLATAM_BUILD="2026.08.25-community11-tabsfix";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const spots=[],active=new Map(),mapObjects=[],mapByCall=new Map();
@@ -2333,8 +2394,8 @@ function setSideTab(name){
  const allowed=["activity","stats","rewards"];
  if(!allowed.includes(name))name="activity";
 
- if(name==="rewards"&&!currentProfile?.focus_unlocked){
-   name=currentProfile?"activity":"stats";
+ if(name==="rewards"&&!currentProfile){
+   name="stats";
  }
 
  activeSideTab=name;
@@ -2400,30 +2461,57 @@ function renderPublicRanking(){
 
  // Resumen ultracompacto visible siempre en ACTIVIDAD:
  // Top 3 para visitantes; si hay usuario, su zona de ranking.
- const quick=(currentProfile&&me.rank)
-   ? [ahead,me,behind].filter(x=>x&&x.callsign)
-   : top.slice(0,3);
-
- glance.innerHTML=quick.length
-   ? `<div class="rank-glance-grid">${quick.map(x=>`
-       <div class="rank-glance-item ${myCall&&String(x.callsign).toUpperCase()===String(myCall).toUpperCase()?"me":""}">
-         <div class="rank-glance-pos">#${x.rank}</div>
-         <div class="rank-glance-call">${x.callsign}</div>
-         <div class="rank-glance-score">${x.reports||0}</div>
-       </div>`).join("")}</div>`
-   : "";
+ if(currentProfile){
+   glance.classList.add("hidden-for-member");
+   glance.innerHTML="";
+ }else{
+   glance.classList.remove("hidden-for-member");
+   const quick=top.slice(0,3);
+   glance.innerHTML=quick.length
+     ? `<div class="rank-glance-grid">${quick.map(x=>`
+         <div class="rank-glance-item">
+           <div class="rank-glance-pos">#${x.rank}</div>
+           <div class="rank-glance-call">${x.callsign}</div>
+           <div class="rank-glance-score">${x.reports||0}</div>
+         </div>`).join("")}</div>`
+     : "";
+ }
 }
 
 function renderSeasonUI(){
  const rewardsTab=document.getElementById("tabRewards");
- const unlocked=Boolean(currentProfile?.focus_unlocked);
+ const lockedBox=document.getElementById("rewardsLocked");
+ const panel=document.getElementById("rewardsPanelCard");
+ const subtitle=document.getElementById("rewardsSubtitle");
 
- if(rewardsTab)rewardsTab.style.display=unlocked?"block":"none";
-
- if(!unlocked){
-   if(activeSideTab==="rewards")setSideTab(currentProfile?"activity":"stats");
+ if(!currentProfile){
+   if(rewardsTab)rewardsTab.style.display="none";
+   if(lockedBox)lockedBox.style.display="none";
+   if(panel)panel.style.display="none";
+   if(activeSideTab==="rewards")setSideTab("stats");
    return;
  }
+
+ if(rewardsTab)rewardsTab.style.display="block";
+
+ const votes=Number(currentProfile.votes_count||0);
+ const unlocked=Boolean(currentProfile.focus_unlocked);
+
+ if(!unlocked){
+   if(lockedBox)lockedBox.style.display="block";
+   if(panel)panel.style.display="none";
+   if(subtitle)subtitle.textContent="Desbloqueá MI FOCO";
+
+   const shown=Math.min(100,votes);
+   document.getElementById("rewardsLockedText").textContent=
+     `${shown}/100 reportes · faltan ${Math.max(0,100-shown)}`;
+   document.getElementById("focusUnlockProgress").style.width=`${shown}%`;
+   return;
+ }
+
+ if(lockedBox)lockedBox.style.display="none";
+ if(panel)panel.style.display="block";
+ if(subtitle)subtitle.textContent="50 reportes por estación";
 
  const meritOrder=["VERANO","OTOÑO","INVIERNO","PRIMAVERA"];
  const achievements=seasonStatusCache?.achievements||[];
@@ -2451,7 +2539,6 @@ function renderSeasonUI(){
  const count=Math.max(0,Number(cur.count||0));
  const target=50;
  const shown=Math.min(target,count);
- const votes=Number(currentProfile.votes_count||0);
 
  document.getElementById("seasonTitle").textContent=`${seasonLabel(season)} ${year}`;
  document.getElementById("seasonProgressBar").style.width=`${Math.min(100,(shown/target)*100)}%`;
@@ -2475,6 +2562,8 @@ function renderSeasonUI(){
 }
 
 function updateProfileUI(){
+ document.body.classList.toggle("has-profile",Boolean(currentProfile));
+
  if(!currentProfile){
    setSideTab("stats");
  }else if(activeSideTab==="stats"){
