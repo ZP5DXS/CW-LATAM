@@ -936,10 +936,42 @@ const RBN_WS_URL = window.CW_LATAM_WS_URL || "wss://cw-latam.onrender.com";
 
 let rbnSocket=null;
 let reconnectTimer=null;
+let lastServerMessageAt=0;
+let clientWatchdogTimer=null;
+const CLIENT_WATCHDOG_MS=40000;
 
 function setLiveState(text){
  const el=document.getElementById("liveState");
  if(el) el.textContent=text;
+}
+
+function scheduleReconnect(delay=1500){
+ clearTimeout(reconnectTimer);
+ reconnectTimer=setTimeout(connectRBN,delay);
+}
+
+function startClientWatchdog(){
+ clearInterval(clientWatchdogTimer);
+
+ clientWatchdogTimer=setInterval(()=>{
+   if(!rbnSocket || rbnSocket.readyState!==WebSocket.OPEN){
+     return;
+   }
+
+   const silentFor=Date.now()-lastServerMessageAt;
+
+   if(lastServerMessageAt && silentFor>CLIENT_WATCHDOG_MS){
+     console.warn("Conexión en vivo sin mensajes. Reconectando…",Math.round(silentFor/1000),"s");
+
+     setLiveState("RECONECTANDO");
+
+     try{
+       rbnSocket.close(4000,"watchdog");
+     }catch(err){
+       try{rbnSocket.close()}catch(_){}
+     }
+   }
+ },5000);
 }
 
 function connectRBN(){
@@ -947,40 +979,79 @@ function connectRBN(){
    setLiveState("DESCONECTADO");
    return;
  }
+
+ if(
+   rbnSocket &&
+   (
+     rbnSocket.readyState===WebSocket.OPEN ||
+     rbnSocket.readyState===WebSocket.CONNECTING
+   )
+ ){
+   return;
+ }
+
+ clearTimeout(reconnectTimer);
+
  try{
    setLiveState("CONECTANDO");
+
    rbnSocket=new WebSocket(RBN_WS_URL);
 
-   rbnSocket.onopen=()=>setLiveState("EN VIVO");
+   rbnSocket.onopen=()=>{
+     lastServerMessageAt=Date.now();
+     setLiveState("EN VIVO");
+     startClientWatchdog();
+   };
 
    rbnSocket.onmessage=(ev)=>{
+     lastServerMessageAt=Date.now();
+
      try{
        const payload=JSON.parse(ev.data);
-       if(payload && payload.type==="status") return;
+
+       if(payload && payload.type==="heartbeat"){
+         if(document.getElementById("liveState")?.textContent!=="EN VIVO"){
+           setLiveState("EN VIVO");
+         }
+         return;
+       }
+
+       if(payload && payload.type==="status"){
+         setLiveState("EN VIVO");
+         return;
+       }
+
        if(payload && payload.type==="history" && Array.isArray(payload.spots)){
          restoringHistory=true;
          payload.spots.forEach(addSpot);
          restoringHistory=false;
          return;
        }
-       if(Array.isArray(payload)) payload.forEach(addSpot);
-       else addSpot(payload);
+
+       if(Array.isArray(payload)){
+         payload.forEach(addSpot);
+       }else{
+         addSpot(payload);
+       }
      }catch(err){
-       console.warn("RBN message ignored:",err);
+       console.warn("Mensaje en vivo ignorado:",err);
      }
    };
 
-   rbnSocket.onerror=()=>setLiveState("ERROR");
+   rbnSocket.onerror=()=>{
+     setLiveState("ERROR");
+   };
 
    rbnSocket.onclose=()=>{
-     setLiveState("DESCONECTADO");
-     clearTimeout(reconnectTimer);
-     reconnectTimer=setTimeout(connectRBN,5000);
+     rbnSocket=null;
+     setLiveState("RECONECTANDO");
+     scheduleReconnect(1500);
    };
+
  }catch(err){
+   rbnSocket=null;
    setLiveState("ERROR");
-   clearTimeout(reconnectTimer);
-   reconnectTimer=setTimeout(connectRBN,5000);
+   scheduleReconnect(1500);
  }
 }
 
