@@ -339,6 +339,8 @@ html[data-theme="light"] .moon-icon{display:none}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
+const CWLATAM_BUILD="2026.08.25-livefix1";
+console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const spots=[],active=new Map(),mapObjects=[],mapByCall=new Map();
 let totalSpots=0,lastSpotAt=0;
@@ -478,49 +480,69 @@ function addSpot(raw){
  if(!raw || typeof raw!=="object")return false;
 
  const rawSeq=Number(raw.seq||0);
- const uniqueId=rawSeq ? `seq:${rawSeq}` :
-   `${raw.spotter||raw.de||""}|${raw.dx||raw.call||""}|${raw.actualFreq??raw.freq??""}|${raw.ts||""}`;
+ const uniqueId=rawSeq
+   ? `seq:${rawSeq}`
+   : `${raw.spotter||raw.de||""}|${raw.dx||raw.call||""}|${raw.actualFreq??raw.freq??""}|${raw.ts||""}`;
 
+ // Sólo ignoramos spots que YA terminaron de procesarse correctamente.
  if(seenSpotIds.has(uniqueId))return false;
- seenSpotIds.add(uniqueId);
-
- // Evitar crecimiento ilimitado del Set.
- if(seenSpotIds.size>4000){
-   const keep=[...seenSpotIds].slice(-2000);
-   seenSpotIds.clear();
-   keep.forEach(x=>seenSpotIds.add(x));
- }
-
- if(rawSeq>lastSpotSeq)lastSpotSeq=rawSeq;
 
  const s=normalizeSpot(raw);
  if(!valid(s))return false;
 
+ try{
+   const prev=active.get(s.dx)||{first:s.ts,best:-999,spotters:new Map()};
 
- totalSpots++;
- lastSpotAt=Date.now();
- spots.unshift(s);
- if(spots.length>200)spots.length=200;
+   prev.last=s.ts;
+   prev.freq=s.freq;
+   prev.actualFreq=s.actualFreq;
+   prev.isChannel=s.isChannel;
+   prev.wpm=s.wpm;
+   prev.type=s.type;
+   prev.best=Math.max(prev.best,s.snr);
+   prev.totalSpots=(prev.totalSpots||0)+1;
+   prev.spotters.set(s.spotter,s.ts);
+   prev.lastSpot=s;
 
- const prev=active.get(s.dx)||{first:s.ts,best:-999,spotters:new Map()};
- prev.last=s.ts;
- prev.freq=s.freq;
- prev.actualFreq=s.actualFreq;
- prev.isChannel=s.isChannel;
- prev.wpm=s.wpm;
- prev.type=s.type;
- prev.best=Math.max(prev.best,s.snr);
- prev.totalSpots=(prev.totalSpots||0)+1;
- prev.spotters.set(s.spotter,s.ts);
- prev.lastSpot=s;
- active.set(s.dx,prev);
+   active.set(s.dx,prev);
 
- maybeAlertChannel(s);
- drawMapSpot(s);
- render();
- return true;
+   // Primero hacemos todo lo que puede fallar visualmente.
+   maybeAlertChannel(s);
+   drawMapSpot(s);
+   render();
+
+   // Recién DESPUÉS de renderizar correctamente confirmamos el spot.
+   totalSpots++;
+   lastSpotAt=Date.now();
+   spots.unshift(s);
+   if(spots.length>200)spots.length=200;
+
+   seenSpotIds.add(uniqueId);
+
+   if(seenSpotIds.size>4000){
+     const keep=[...seenSpotIds].slice(-2000);
+     seenSpotIds.clear();
+     keep.forEach(x=>seenSpotIds.add(x));
+   }
+
+   if(rawSeq>lastSpotSeq)lastSpotSeq=rawSeq;
+
+   return true;
+
+ }catch(err){
+   console.error(
+     "Error procesando spot LIVE:",
+     rawSeq || "sin-seq",
+     s.spotter,
+     s.dx,
+     err
+   );
+
+   // Importante: NO agregamos a seenSpotIds ni avanzamos lastSpotSeq.
+   // El polling podrá reintentarlo en el siguiente ciclo.
+   return false;
+ }
 }
-
 
 function rectsOverlap(a,b,pad=8){
  return !(a.right+pad<=b.left || a.left>=b.right+pad || a.bottom+pad<=b.top || a.top>=b.bottom+pad);
@@ -1101,16 +1123,26 @@ async function pollLiveSpots(){
 
    if(payload && Array.isArray(payload.spots)){
      for(const spot of payload.spots){
-       addSpot(spot);
+       const seq=Number(spot?.seq||0);
+
+       // addSpot sólo avanza el cursor si el spot realmente
+       // fue procesado o ya estaba procesado anteriormente.
+       const alreadySeen=seq && seenSpotIds.has(`seq:${seq}`);
+       const ok=addSpot(spot);
+
+       if(!ok && !alreadySeen){
+         console.warn("Spot pendiente; se reintentará:",seq,spot?.spotter,spot?.dx);
+         break;
+       }
      }
    }
 
-   if(payload && Number(payload.lastSeq)>lastSpotSeq){
-     lastSpotSeq=Number(payload.lastSeq);
-   }
+   // NO copiamos payload.lastSeq al cursor.
+   // lastSpotSeq representa exclusivamente el último spot
+   // confirmado por la interfaz.
 
-   // Una respuesta HTTP correcta también confirma que el backend está vivo.
-   lastServerMessageAt=Date.now();
+   // HTTP confirma que el backend responde, pero NO sustituye
+   // el heartbeat del WebSocket para su watchdog.
 
  }catch(err){
    console.warn("Respaldo HTTP:",err.message||err);
@@ -1132,8 +1164,10 @@ document.addEventListener("visibilitychange",()=>{
 window.addEventListener("focus",pollLiveSpots);
 
 window.CWLATAM={
+ build: CWLATAM_BUILD,
  ingest: addSpot,
- connect: connectRBN
+ connect: connectRBN,
+ poll: pollLiveSpots
 };
 
 connectRBN();
