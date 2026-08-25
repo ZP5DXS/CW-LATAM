@@ -475,6 +475,24 @@ function drawMapSpot(s){
 }
 
 function addSpot(raw){
+ if(!raw || typeof raw!=="object")return false;
+
+ const rawSeq=Number(raw.seq||0);
+ const uniqueId=rawSeq ? `seq:${rawSeq}` :
+   `${raw.spotter||raw.de||""}|${raw.dx||raw.call||""}|${raw.actualFreq??raw.freq??""}|${raw.ts||""}`;
+
+ if(seenSpotIds.has(uniqueId))return false;
+ seenSpotIds.add(uniqueId);
+
+ // Evitar crecimiento ilimitado del Set.
+ if(seenSpotIds.size>4000){
+   const keep=[...seenSpotIds].slice(-2000);
+   seenSpotIds.clear();
+   keep.forEach(x=>seenSpotIds.add(x));
+ }
+
+ if(rawSeq>lastSpotSeq)lastSpotSeq=rawSeq;
+
  const s=normalizeSpot(raw);
  if(!valid(s))return false;
 
@@ -940,6 +958,14 @@ let lastServerMessageAt=0;
 let clientWatchdogTimer=null;
 const CLIENT_WATCHDOG_MS=40000;
 
+// Respaldo HTTP: si el WebSocket no entrega un spot,
+// lo recuperamos como máximo ~1 segundo después.
+const RBN_HTTP_URL="https://cw-latam.onrender.com";
+const HTTP_POLL_MS=1000;
+let lastSpotSeq=0;
+let pollBusy=false;
+const seenSpotIds=new Set();
+
 function setLiveState(text){
  const el=document.getElementById("liveState");
  if(el) el.textContent=text;
@@ -1054,6 +1080,56 @@ function connectRBN(){
    scheduleReconnect(1500);
  }
 }
+
+async function pollLiveSpots(){
+ if(pollBusy)return;
+ pollBusy=true;
+
+ try{
+   const url=`${RBN_HTTP_URL}/spots?after=${encodeURIComponent(lastSpotSeq)}&_=${Date.now()}`;
+   const res=await fetch(url,{
+     method:"GET",
+     cache:"no-store",
+     headers:{"accept":"application/json"}
+   });
+
+   if(!res.ok){
+     throw new Error(`HTTP ${res.status}`);
+   }
+
+   const payload=await res.json();
+
+   if(payload && Array.isArray(payload.spots)){
+     for(const spot of payload.spots){
+       addSpot(spot);
+     }
+   }
+
+   if(payload && Number(payload.lastSeq)>lastSpotSeq){
+     lastSpotSeq=Number(payload.lastSeq);
+   }
+
+   // Una respuesta HTTP correcta también confirma que el backend está vivo.
+   lastServerMessageAt=Date.now();
+
+ }catch(err){
+   console.warn("Respaldo HTTP:",err.message||err);
+ }finally{
+   pollBusy=false;
+ }
+}
+
+setInterval(pollLiveSpots,HTTP_POLL_MS);
+
+// Primera consulta apenas carga la página.
+// No esperamos al primer intervalo.
+setTimeout(pollLiveSpots,500);
+
+
+document.addEventListener("visibilitychange",()=>{
+ if(!document.hidden)pollLiveSpots();
+});
+window.addEventListener("focus",pollLiveSpots);
 
 window.CWLATAM={
  ingest: addSpot,
