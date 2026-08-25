@@ -1289,6 +1289,125 @@ body.has-profile #tabRewards{display:block!important}
   }
 }
 
+
+/* ===== COMMUNITY 12 · FINAL TAB / REWARD LOGIC ===== */
+
+/* Invitado: solamente ACTIVIDAD. */
+body:not(.has-profile) #tabStats,
+body:not(.has-profile) #tabRewards{
+  display:none!important
+}
+body:not(.has-profile) .side-tabs{
+  grid-template-columns:1fr!important
+}
+
+/* Identificado: las tres solapas. */
+body.has-profile #tabStats,
+body.has-profile #tabRewards{
+  display:block!important
+}
+body.has-profile .side-tabs{
+  grid-template-columns:repeat(3,1fr)!important
+}
+
+/* Recompensas: roadmap siempre visible una vez identificado */
+.reward-roadmap{
+  padding:11px 12px 12px;
+  border-top:1px solid var(--line)
+}
+.reward-roadmap-title{
+  font:900 7px ui-sans-serif,system-ui;
+  letter-spacing:.12em;
+  color:var(--muted);
+  margin-bottom:7px
+}
+.reward-roadmap-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px
+}
+.reward-season{
+  position:relative;
+  min-height:67px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:8px;
+  background:rgba(255,255,255,.015);
+  opacity:.38
+}
+.reward-season.current{
+  opacity:.72;
+  border-color:rgba(255,200,92,.32);
+  background:rgba(255,200,92,.035)
+}
+.reward-season.available{
+  opacity:1;
+  border-color:rgba(88,255,146,.34);
+  background:rgba(88,255,146,.045)
+}
+.reward-season.earned{
+  opacity:1;
+  border-color:rgba(88,255,146,.42);
+  box-shadow:inset 0 0 0 1px rgba(88,255,146,.08)
+}
+.reward-season-icon{font-size:18px}
+.reward-season-name{
+  margin-top:3px;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.05em
+}
+.reward-season-period{
+  margin-top:2px;
+  color:var(--muted);
+  font:700 6.5px ui-monospace,monospace
+}
+.reward-season-state{
+  position:absolute;
+  right:7px;
+  top:7px;
+  font-size:10px
+}
+
+/* Antes de 100, mostramos MI FOCO + roadmap, no ocultamos el roadmap */
+.rewards-locked{
+  border-bottom:0
+}
+.rewards-panel-card.preunlock{
+  display:block!important;
+  padding:0!important;
+  background:transparent!important
+}
+.rewards-panel-card.preunlock > .season-head,
+.rewards-panel-card.preunlock > .season-progress,
+.rewards-panel-card.preunlock > .season-meta,
+.rewards-panel-card.preunlock > .merit-row,
+.rewards-panel-card.preunlock > .leaderboard{
+  display:none!important
+}
+
+/* Votos aún más seguros en una sola línea */
+.decode-main .vote-row{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  width:100%!important;
+  gap:3px!important
+}
+.decode-main .vote-btn{
+  min-width:0!important;
+  width:100%!important;
+  max-width:100%!important;
+  padding:5px 2px!important;
+  font-size:6.7px!important;
+  letter-spacing:0!important;
+  white-space:nowrap!important
+}
+
+@media(max-width:700px){
+  .reward-roadmap-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .reward-season{min-height:62px;padding:7px}
+}
+
 </style>
 </head>
 <body>
@@ -1385,7 +1504,7 @@ body.has-profile #tabRewards{display:block!important}
 <aside class="panel live-decode">
   <div class="side-tabs">
     <button type="button" class="side-tab active" id="tabActivity">ACTIVIDAD</button>
-    <button type="button" class="side-tab" id="tabStats">ESTADÍSTICAS</button>
+    <button type="button" class="side-tab" id="tabStats" style="display:none">ESTADÍSTICAS</button>
     <button type="button" class="side-tab" id="tabRewards" style="display:none">RECOMPENSAS</button>
   </div>
 
@@ -1440,6 +1559,11 @@ body.has-profile #tabRewards{display:block!important}
       <div class="rewards-locked-title">DESBLOQUEÁ MI FOCO</div>
       <div class="rewards-locked-sub" id="rewardsLockedText">—</div>
       <div class="season-progress"><i id="focusUnlockProgress"></i></div>
+    </div>
+
+    <div class="reward-roadmap" id="rewardRoadmap">
+      <div class="reward-roadmap-title">MÉRITOS ESTACIONALES · 50 REPORTES</div>
+      <div class="reward-roadmap-grid" id="rewardRoadmapGrid"></div>
     </div>
 
     <div class="rewards-panel-card" id="rewardsPanelCard">
@@ -1554,7 +1678,7 @@ body.has-profile #tabRewards{display:block!important}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.25-community11-tabsfix";
+const CWLATAM_BUILD="2026.08.25-community12-final-tabs";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const spots=[],active=new Map(),mapObjects=[],mapByCall=new Map();
@@ -2354,6 +2478,36 @@ function seasonLabel(name){
  return `${m.icon} ${currentLang==="pt"?m.pt:m.es}`;
 }
 
+function currentLatamSeason(){
+ const m=new Date().getMonth()+1;
+ if(m===12||m<=2)return "VERANO";
+ if(m>=3&&m<=5)return "OTOÑO";
+ if(m>=6&&m<=8)return "INVIERNO";
+ return "PRIMAVERA";
+}
+
+function seasonPeriod(name){
+ const es={
+   VERANO:"DIC · ENE · FEB",
+   OTOÑO:"MAR · ABR · MAY",
+   INVIERNO:"JUN · JUL · AGO",
+   PRIMAVERA:"SEP · OCT · NOV"
+ };
+ const pt={
+   VERANO:"DEZ · JAN · FEV",
+   OTOÑO:"MAR · ABR · MAI",
+   INVIERNO:"JUN · JUL · AGO",
+   PRIMAVERA:"SET · OUT · NOV"
+ };
+ return (currentLang==="pt"?pt:es)[name]||"";
+}
+
+function orderedSeasons(){
+ const all=["VERANO","OTOÑO","INVIERNO","PRIMAVERA"];
+ const cur=currentLatamSeason();
+ return [cur,...all.filter(s=>s!==cur)];
+}
+
 async function loadSeasonData(){
  try{
    const globalRes=await sb.rpc("cw_get_collaboration_leaderboard",{
@@ -2394,8 +2548,9 @@ function setSideTab(name){
  const allowed=["activity","stats","rewards"];
  if(!allowed.includes(name))name="activity";
 
- if(name==="rewards"&&!currentProfile){
-   name="stats";
+ // Invitados sólo tienen ACTIVIDAD.
+ if(!currentProfile && name!=="activity"){
+   name="activity";
  }
 
  activeSideTab=name;
@@ -2483,59 +2638,99 @@ function renderSeasonUI(){
  const lockedBox=document.getElementById("rewardsLocked");
  const panel=document.getElementById("rewardsPanelCard");
  const subtitle=document.getElementById("rewardsSubtitle");
+ const roadmap=document.getElementById("rewardRoadmap");
+ const roadmapGrid=document.getElementById("rewardRoadmapGrid");
 
  if(!currentProfile){
    if(rewardsTab)rewardsTab.style.display="none";
    if(lockedBox)lockedBox.style.display="none";
    if(panel)panel.style.display="none";
-   if(activeSideTab==="rewards")setSideTab("stats");
+   if(roadmap)roadmap.style.display="none";
+   if(activeSideTab==="rewards")setSideTab("activity");
    return;
  }
 
  if(rewardsTab)rewardsTab.style.display="block";
+ if(roadmap)roadmap.style.display="block";
 
  const votes=Number(currentProfile.votes_count||0);
  const unlocked=Boolean(currentProfile.focus_unlocked);
+ const currentSeason=currentLatamSeason();
+ const achievements=seasonStatusCache?.achievements||[];
+ const earnedBySeason={};
+
+ for(const a of achievements){
+   if(!earnedBySeason[a.season] || Number(a.season_year)>Number(earnedBySeason[a.season].season_year)){
+     earnedBySeason[a.season]=a;
+   }
+ }
+
+ // Roadmap siempre visible una vez identificado.
+ roadmapGrid.innerHTML=orderedSeasons().map(s=>{
+   const meta=SEASON_META[s];
+   const earned=earnedBySeason[s];
+   const isCurrent=s===currentSeason;
+   const available=isCurrent&&unlocked&&!earned;
+
+   const state=earned
+     ? "✓"
+     : available
+       ? "●"
+       : "🔒";
+
+   const cls=[
+     "reward-season",
+     isCurrent?"current":"",
+     available?"available":"",
+     earned?"earned":""
+   ].filter(Boolean).join(" ");
+
+   return `<div class="${cls}">
+     <div class="reward-season-state">${state}</div>
+     <div class="reward-season-icon">${meta.icon}</div>
+     <div class="reward-season-name">${currentLang==="pt"?meta.pt:meta.es}</div>
+     <div class="reward-season-period">${seasonPeriod(s)}</div>
+   </div>`;
+ }).join("");
 
  if(!unlocked){
    if(lockedBox)lockedBox.style.display="block";
-   if(panel)panel.style.display="none";
-   if(subtitle)subtitle.textContent="Desbloqueá MI FOCO";
+   if(panel){
+     panel.style.display="block";
+     panel.classList.add("preunlock");
+   }
+   if(subtitle)subtitle.textContent="MI FOCO + MÉRITOS";
 
    const shown=Math.min(100,votes);
    document.getElementById("rewardsLockedText").textContent=
-     `${shown}/100 reportes · faltan ${Math.max(0,100-shown)}`;
+     `${shown}/100 · faltan ${Math.max(0,100-shown)} reportes`;
    document.getElementById("focusUnlockProgress").style.width=`${shown}%`;
    return;
  }
 
  if(lockedBox)lockedBox.style.display="none";
- if(panel)panel.style.display="block";
- if(subtitle)subtitle.textContent="50 reportes por estación";
-
- const meritOrder=["VERANO","OTOÑO","INVIERNO","PRIMAVERA"];
- const achievements=seasonStatusCache?.achievements||[];
- const latest={};
-
- for(const a of achievements){
-   if(!latest[a.season] || Number(a.season_year)>Number(latest[a.season].season_year)){
-     latest[a.season]=a;
-   }
+ if(panel){
+   panel.style.display="block";
+   panel.classList.remove("preunlock");
  }
+ if(subtitle)subtitle.textContent="Temporada activa";
+
+ const meritOrder=orderedSeasons();
 
  document.getElementById("meritRow").innerHTML=meritOrder.map(s=>{
    const meta=SEASON_META[s];
-   const a=latest[s];
-   return `<div class="merit ${a?"on":""}">
+   const a=earnedBySeason[s];
+   const isCurrent=s===currentSeason;
+   return `<div class="merit ${a?"on":""}" style="${isCurrent?"border-color:rgba(255,200,92,.32)":""}">
      <span class="ico">${meta.icon}</span>
      <div class="name">${currentLang==="pt"?meta.pt:meta.es}</div>
-     <div class="year">${a?a.season_year:"—"}</div>
+     <div class="year">${a?a.season_year:(isCurrent?"ACTIVA":"—")}</div>
    </div>`;
  }).join("");
 
  const cur=seasonStatusCache?.current||{};
- const season=cur.season||seasonLeaderboardCache?.season||"—";
- const year=cur.season_year||seasonLeaderboardCache?.season_year||"";
+ const season=cur.season||currentSeason;
+ const year=cur.season_year||new Date().getFullYear();
  const count=Math.max(0,Number(cur.count||0));
  const target=50;
  const shown=Math.min(target,count);
@@ -2543,8 +2738,8 @@ function renderSeasonUI(){
  document.getElementById("seasonTitle").textContent=`${seasonLabel(season)} ${year}`;
  document.getElementById("seasonProgressBar").style.width=`${Math.min(100,(shown/target)*100)}%`;
  document.getElementById("seasonMeta").textContent=count>=target
-   ? `${target}/${target} · mérito completado · ${votes} reportes totales`
-   : `${shown}/${target} · faltan ${Math.max(0,target-shown)} · ${votes} reportes totales`;
+   ? `${target}/${target} · mérito completado`
+   : `${shown}/${target} · faltan ${Math.max(0,target-shown)}`;
 
  const leaders=seasonLeaderboardCache?.leaders||[];
  document.getElementById("leaderboardList").innerHTML=leaders.length
@@ -2565,9 +2760,7 @@ function updateProfileUI(){
  document.body.classList.toggle("has-profile",Boolean(currentProfile));
 
  if(!currentProfile){
-   setSideTab("stats");
- }else if(activeSideTab==="stats"){
-   // Keep statistics if user explicitly arrived there; first login goes to activity below.
+   setSideTab("activity");
  }
 
  const btn=document.getElementById("profileToggle");
@@ -3030,7 +3223,7 @@ document.getElementById("profileContinue").addEventListener("click",()=>profileA
 document.getElementById("profileSave").addEventListener("click",()=>profileAction("update"));
 document.getElementById("profileLogout").addEventListener("click",()=>{
  sessionToken="";currentProfile=null;personalMode=false;personalScores.clear();votedCalls.clear();watchlist.clear();watchAlertedCalls.clear();
- setSideTab("stats");seasonStatusCache=null;seasonLeaderboardCache=null;
+ setSideTab("activity");seasonStatusCache=null;seasonLeaderboardCache=null;
  localStorage.removeItem("cwlatam_profile_token");
  updateProfileUI();closeProfileModal();renderActivity();
 });
@@ -3047,7 +3240,7 @@ document.getElementById("langToggle").addEventListener("click",()=>{
 });
 
 (async()=>{
- setSideTab("stats");
+ setSideTab("activity");
  await recordVisit();
  await restoreProfile();
  subscribeChat();

@@ -1,147 +1,177 @@
-# 📡 CW LATAM
+# 📡 CW LATAM IA
 
-### Radar CW en tiempo real para Latinoamérica
+**Radar CW colaborativo y personalizado para radioaficionados de Latinoamérica.**
 
-**CW LATAM** es una plataforma web gratuita y open source diseñada para visualizar en tiempo real la actividad CW detectada por estaciones receptoras de la red en Sudamérica.
+🇧🇷 **Português:** [README-PT.md](README-PT.md)
 
-El objetivo es ofrecer una interfaz simple, visual y rápida para descubrir qué estaciones están siendo escuchadas regionalmente en la banda de **40 metros**, facilitando encuentros, actividad CW y operación QRS entre radioaficionados.
+**CW LATAM IA** es un proyecto gratuito, sin anuncios y open source creado por **Mathias Maidana — ZP5DXS** para ayudar a los operadores de CW de Latinoamérica a **encontrarse, escucharse y coordinar contactos en tiempo real**, con especial atención a la frecuencia de encuentro **7.033 MHz — LXCW QRS**.
 
-🌐 **Web:**  
-https://zp5dxs.github.io/CW-LATAM/
+La idea es sencilla: los spots de la red nos dicen que una estación está siendo escuchada, pero la propagación real no es igual para todos. CW LATAM agrega la experiencia de los propios operadores para convertir esos datos en información cada vez más útil para cada estación.
 
----
+## 🎯 ¿Qué hace?
 
-## 📡 ¿Qué muestra?
+CW LATAM recibe spots CW de la red y muestra actividad de **40 metros** detectada por receptores de Sudamérica.
 
-CW LATAM procesa spots CW de la red y muestra únicamente actividad relevante para nuestra región.
+La interfaz permite:
 
-### Filtros principales
+- Ver estaciones llamando **CQ** prácticamente en tiempo real.
+- Visualizar gráficamente la actividad sobre un mapa.
+- Consultar indicativo, frecuencia, señal, velocidad y receptores que detectaron la estación.
+- Dar prioridad especial al canal de encuentro **7.033 MHz**.
+- Recibir una alerta visual y sonora en CW cuando aparece actividad relevante.
+- Abrir el indicativo de una estación para consultarlo rápidamente.
+- Utilizar un modo **FOCO** para concentrar la visualización geográficamente.
+- Identificarse simplemente con **CALLSIGN + LOCATOR**.
+- Reportar **ESCUCHO / DÉBIL / NO ESCUCHO** sobre los spots.
+- Crear una lista personal de indicativos en **MIS ALERTAS**.
+- Participar del chat comunitario para coordinación rápida.
+- Consultar estadísticas, rankings y recompensas de colaboración.
+- Usar **MI FOCO**, una recomendación personalizada basada en los reportes acumulados.
 
-- 📻 Banda de **40 metros**
-- ⚡ Modo **CW**
-- 📢 Estaciones detectadas llamando **CQ**
-- 🌎 Spots recibidos por estaciones receptoras ubicadas en **Sudamérica**
-- ⏱️ Actividad visible durante un máximo de **10 minutos**
+## 🧠 ¿Cómo logra personalizar la escucha?
 
-La estación transmitiendo puede encontrarse en cualquier parte del mundo.
+Un spot automático confirma que una estación fue detectada por un receptor, pero eso no significa necesariamente que vos puedas escucharla desde tu ubicación y con tu estación.
 
----
+Por eso CW LATAM suma una segunda capa de información: **reportes humanos**.
 
-## 🗺️ Radar continental
+Cada operador puede indicar:
 
-Los spots son representados visualmente sobre un mapa.
+🟢 **ESCUCHO** — la estación llega correctamente.  
+🟡 **DÉBIL** — se recibe, pero con dificultad.  
+🔴 **NO ESCUCHO** — no se recibe desde su estación.
 
-Cada detección muestra la relación:
+El **locator** permite relacionar esos reportes con la ubicación aproximada del operador. A medida que la comunidad aporta información, el sistema puede aprender qué receptores, zonas y trayectos representan mejor lo que realmente escucha cada estación.
 
-**Receptor → Estación transmitiendo**
+El objetivo de **MI FOCO** no es reemplazar los spots de la red, sino ordenarlos y personalizarlos usando experiencia colectiva.
 
-Las trazas permiten visualizar desde qué puntos de Sudamérica está siendo escuchada una estación.
+## 🤖 MI FOCO
 
-Las señales desaparecen progresivamente mediante un efecto de *fade* a medida que envejecen y son eliminadas después de 10 minutos sin nueva actividad.
+Para que una recomendación personalizada tenga datos propios suficientes, **MI FOCO se desbloquea después de 100 reportes**.
 
----
+Antes de llegar a esa cantidad, CW LATAM muestra el progreso restante.
 
-## 📻 Frecuencia LXCW QRS — 7.033 MHz
+Después, los nuevos reportes continúan mejorando la información disponible y alimentan los méritos estacionales:
 
-CW LATAM utiliza:
+- ☀️ **Verano**
+- 🍂 **Otoño**
+- ❄️ **Invierno**
+- 🌱 **Primavera**
 
-### **7.033 MHz**
+Cada mérito se obtiene colaborando con **50 reportes durante la estación correspondiente**.
 
-como frecuencia de encuentro CW/QRS.
+La intención no es solamente crear un ranking: es mantener una red de observaciones humanas activa durante todo el año y contemplar los cambios estacionales de propagación.
 
-**CALL / LISTEN — 7.033 MHz**
+## 📻 7.033 MHz — LXCW QRS
 
-Las detecciones entre:
+CW LATAM considera **7.033 MHz** como frecuencia de encuentro para operadores CW/QRS.
 
-**7032.9 – 7033.1 kHz**
+Los spots próximos a esta frecuencia reciben tratamiento prioritario y una presentación destacada para que sea fácil descubrir cuándo otro operador está llamando allí.
 
-son normalizadas visualmente a **7033.0 kHz**, contemplando pequeñas diferencias de frecuencia entre equipos.
+**LLAMÁ / ESCUCHÁ EN 7.033 MHz**
 
-Las estaciones detectadas en esta frecuencia reciben **prioridad absoluta y una identificación visual especial** dentro del radar.
+La plataforma es una ayuda para encontrarnos. El contacto sigue ocurriendo donde debe ocurrir: **en la radio**.
 
----
+## 👤 Identificación
 
-## 🔊 Alerta CW 7033
+No hace falta crear una cuenta tradicional ni recordar otra contraseña.
 
-La interfaz puede generar una alerta sonora cuando aparece nueva actividad en la frecuencia de encuentro.
+Ingresá:
 
-La alerta utiliza tonos Morse reales:
+**CALLSIGN + LOCATOR**
 
-**CQ CQ CQ**
+Los valores se normalizan automáticamente en mayúsculas. Esa combinación identifica tu estación y permite recuperar tu perfil cuando volvés a ingresar desde otro navegador o dispositivo.
 
-El usuario puede activar o silenciar esta función desde la propia interfaz.
+El CALL y el locator pueden modificarse posteriormente.
 
----
+## 🗺️ FOCO geográfico
 
-## 📊 Prioridad regional
+El mapa puede utilizarse para concentrar la observación en una zona determinada.
 
-Una estación puede ser detectada varias veces por diferentes receptores.
+Esto resulta útil porque no todos los receptores de la red tienen el mismo valor para un operador: distancia, ubicación, propagación, antenas y condiciones locales pueden hacer que un receptor represente mejor que otro lo que realmente ocurre en tu zona.
 
-CW LATAM prioriza especialmente la **cantidad de receptores únicos** que escuchan una misma estación.
+Los reportes de la comunidad permiten ir refinando esa relación.
 
-Esto permite distinguir entre:
+## 💬 Chat CW LATAM
 
-- una estación detectada muchas veces por un único receptor;
-- una estación escuchada simultáneamente desde diferentes lugares de Sudamérica.
+El chat está pensado como una herramienta simple de coordinación entre operadores.
 
-La segunda representa una señal con mayor cobertura regional.
+No pretende convertirse en una red social: sirve para avisar actividad, coordinar una escucha, comentar condiciones o facilitar un encuentro en CW.
 
----
+Los mensajes son temporales y el sistema también puede publicar información automática sobre la actividad y los datos colaborativos reunidos.
 
-## 🎯 Foco regional
+## ⭐ Estadísticas y recompensas
 
-El radar permite utilizar un modo de **FOCO** alrededor del centro seleccionado en el mapa.
+Los reportes aportados también permiten construir un ranking público de colaboración.
 
-Esto permite dar mayor relevancia a los receptores cercanos a una determinada región y observar la actividad CW desde una perspectiva más local.
+Los usuarios no identificados pueden ver el **Top 3**, mientras que los operadores identificados pueden consultar sus estadísticas y posición.
 
----
+Las recompensas buscan reconocer a quienes ayudan a mejorar el modelo colectivo y mantener actualizados los datos durante las distintas estaciones del año.
 
-## ⚡ Tiempo real
+## 🚨 MIS ALERTAS
 
-La plataforma utiliza una arquitectura de actualización continua.
+Una vez identificado, podés agregar indicativos a una lista personal.
 
-Los nuevos spots son enviados automáticamente al navegador y aparecen sin necesidad de actualizar manualmente la página.
+Cuando uno de esos indicativos aparece entre los spots activos, CW LATAM lo destaca para facilitar el seguimiento de amigos, estaciones especiales, expediciones u operadores que estés buscando.
 
-La interfaz mantiene únicamente actividad reciente para conservar la naturaleza de **radar en tiempo real** del proyecto.
+## 🚀 Uso
 
----
+CW LATAM funciona directamente desde el navegador.
 
-## 🧭 Filosofía del proyecto
+No requiere instalar programas.
 
-CW LATAM nace como una herramienta comunitaria para fomentar la actividad CW en Latinoamérica.
+1. Abrí CW LATAM.
+2. Observá la actividad de 40 m.
+3. Para participar, ingresá tu **CALLSIGN + LOCATOR**.
+4. Cuando escuches una estación reportada, votá **ESCUCHO**, **DÉBIL** o **NO ESCUCHO**.
+5. Usá el mapa, las alertas y el chat para coordinar.
+6. Al alcanzar 100 reportes, se habilita **MI FOCO**.
+7. Seguí colaborando para mejorar las recomendaciones y obtener los méritos estacionales.
 
-El proyecto busca ser:
+## 🔒 Privacidad y filosofía
+
+CW LATAM está diseñado para utilizar únicamente la información necesaria para sus funciones comunitarias.
+
+El locator representa una **zona geográfica de radio**, no una dirección postal exacta.
+
+El proyecto busca mantenerse:
 
 **GRATIS · SIN ANUNCIOS · OPEN SOURCE**
 
-Sin cuentas obligatorias, sin instalaciones y accesible directamente desde cualquier navegador moderno.
-
----
+Sin suscripciones para acceder a las funciones básicas y sin convertir la actividad de los radioaficionados en publicidad.
 
 ## 🛠️ Tecnología
 
-- HTML / CSS / JavaScript
-- Leaflet / OpenStreetMap
-- Node.js
-- WebSocket
-- Streaming de spots en tiempo real
-- GitHub Pages
-- Backend relay independiente
+La plataforma combina una arquitectura web ligera con:
+
+- HTML, CSS y JavaScript.
+- WebSocket para actualización de spots en tiempo real.
+- Un relay del lado servidor para procesar el flujo de spots.
+- Supabase para perfiles, reportes, estadísticas, rankings, chat y datos colaborativos.
+- Maidenhead Locator para contextualización geográfica.
+- Un modelo de recomendación basado en la relación entre spots, receptores, ubicación y reportes humanos.
+
+La arquitectura intenta mantener separada la adquisición de spots de la inteligencia comunitaria: **los spots aportan observaciones automáticas y los operadores aportan la realidad de escucha**.
+
+## 🌎 Un proyecto para LATAM
+
+CW LATAM nació pensando especialmente en nuestra región y en las particularidades de operar CW desde Latinoamérica.
+
+Cuantos más operadores participen y reporten lo que realmente escuchan, mejor puede representar el sistema las condiciones reales de propagación para nuestra comunidad.
+
+No buscamos reemplazar la radio.
+
+Buscamos que sea **más fácil encontrarnos en ella**.
 
 ---
 
-## 📜 Licencia
+### 73!
 
-Este proyecto se distribuye bajo licencia **MIT**.
+Proyecto desarrollado y mantenido por:
 
-Podés estudiar, modificar, reutilizar y contribuir al código respetando los términos de la licencia.
+**Mathias Maidana — ZP5DXS 🇵🇾**
 
----
+Hecho desde Paraguay para la comunidad CW de Latinoamérica.
 
-## 📻 Autor
+**Gratis · Sin anuncios · Open Source**
 
-**Mathias Maidana — ZP5DXS**
-
-Proyecto desarrollado para la comunidad CW latinoamericana.
-
-**73!**
+🇧🇷 [Leia este README em Português](README-PT.md)
