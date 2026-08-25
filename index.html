@@ -670,6 +670,324 @@ html[data-theme="light"] .moon-icon{display:none}
 .lb-loc{color:var(--muted);font:700 7px ui-monospace,monospace}
 .lb-score{font:900 8px ui-monospace,monospace;color:var(--green)}
 
+
+/* ===== COMMUNITY 7 · POLISH / MOBILE ===== */
+
+/* Header robusto */
+.logo{
+  flex:0 0 44px;
+  width:44px!important;
+  height:44px!important;
+  min-width:44px;
+  min-height:44px;
+  aspect-ratio:1/1
+}
+.brand{min-width:0;flex:1}
+.brand>div:last-child{min-width:0}
+.brand h1,.brand small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.statuses{align-items:center}
+.profile-toggle{max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Perfil: sin párrafos explicativos */
+#profileIntro{display:none!important}
+.profile-summary:empty{display:none}
+.profile-summary{margin-top:10px}
+#profileCall,#profileLocator,#watchCall{
+  text-transform:uppercase;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  letter-spacing:.05em
+}
+
+/* Chat convencional: mensajes verticales, sin tarjetas cortadas lateralmente */
+.chat-strip{
+  min-height:180px;
+  max-height:300px
+}
+.chat-top{
+  min-height:44px;
+  padding:9px 12px
+}
+.chat-strip-title{font-size:11px}
+.chat-strip-sub{
+  display:inline-block;
+  margin-top:2px;
+  opacity:.55;
+  letter-spacing:.08em
+}
+.chat-model{
+  border:1px solid rgba(88,255,146,.22);
+  border-radius:999px;
+  padding:5px 8px;
+  color:var(--green);
+  opacity:.75
+}
+.chat-list{
+  min-height:95px;
+  max-height:160px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:8px 10px
+}
+.chat-msg,.chat-msg.summary{
+  width:100%;
+  min-width:0;
+  max-width:none;
+  height:auto;
+  min-height:48px;
+  flex:0 0 auto;
+  padding:8px 10px
+}
+.chat-text{
+  display:block;
+  overflow:visible;
+  font-size:10px;
+  line-height:1.4;
+  margin-top:4px
+}
+.chat-head{font-size:8px}
+.chat-compose{
+  padding:8px 10px 10px;
+  grid-template-columns:minmax(0,1fr) 78px
+}
+.chat-compose input{
+  height:40px;
+  font-size:11px
+}
+.chat-compose button{
+  height:40px;
+  min-width:0;
+  width:78px
+}
+
+/* BOT en el chat: mensajes compactos pero claramente diferenciados */
+.chat-msg.bot{
+  border-left:3px solid rgba(88,255,146,.52);
+  background:linear-gradient(90deg,rgba(88,255,146,.055),transparent 55%),var(--panel2)
+}
+.chat-msg.summary{
+  border-left-color:rgba(255,200,92,.6)
+}
+
+/* Footer más respirable */
+.footer{padding-bottom:4px}
+
+/* MOBILE */
+@media(max-width:700px){
+  .shell{padding:7px 7px 10px}
+
+  .topbar{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:7px;
+    align-items:stretch;
+    margin-bottom:7px
+  }
+
+  .brand{
+    width:100%;
+    gap:9px;
+    align-items:center
+  }
+
+  .logo{
+    flex-basis:38px;
+    width:38px!important;
+    height:38px!important;
+    min-width:38px;
+    min-height:38px
+  }
+  .logo:after{height:17px}
+
+  .brand h1{
+    font-size:14px;
+    letter-spacing:.09em
+  }
+  .brand small{
+    font-size:7px;
+    letter-spacing:.07em;
+    margin-top:1px
+  }
+
+  .statuses{
+    width:100%;
+    max-width:none!important;
+    display:grid;
+    grid-template-columns:minmax(84px,1fr) 36px minmax(48px,auto) 46px 36px;
+    gap:5px;
+    justify-content:stretch
+  }
+  .pill{
+    min-width:0;
+    height:34px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0 7px;
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+    font-size:8px
+  }
+  .theme-toggle,.alert-toggle{
+    width:36px;
+    height:34px
+  }
+  .lang-toggle{
+    height:34px;
+    min-width:46px;
+    padding:0 7px
+  }
+  .profile-toggle{
+    height:34px;
+    min-width:0;
+    max-width:none;
+    padding:0 7px;
+    font-size:8px
+  }
+
+  .grid{grid-template-columns:1fr;gap:7px}
+  .panel{border-radius:12px}
+
+  .map-wrap{
+    height:58vh;
+    min-height:390px;
+    max-height:540px
+  }
+  .radar-sweep{
+    width:105vmax;
+    height:105vmax
+  }
+
+  .map-badge{
+    left:8px;
+    top:58px;
+    padding:6px 8px;
+    font-size:8px
+  }
+  .map-focus-toggle{
+    left:8px;
+    top:98px;
+    right:8px;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:3px;
+    padding:4px
+  }
+  .map-focus-toggle button{
+    min-width:0;
+    padding:6px 4px;
+    font-size:7px;
+    letter-spacing:.035em;
+    white-space:nowrap
+  }
+  .focus-note{
+    left:8px;
+    right:8px;
+    top:137px;
+    max-width:none;
+    font-size:8px
+  }
+  .legend{
+    right:8px;
+    bottom:30px;
+    padding:6px 8px;
+    font-size:8px
+  }
+
+  .dial{
+    padding:8px
+  }
+  .dial-callout{
+    min-height:50px;
+    padding:3px 0 6px
+  }
+  .dial-callout .meet-kicker{font-size:7px;letter-spacing:.11em}
+  .dial-callout strong{font-size:23px}
+  .dial-callout .meet-sub{font-size:7px;letter-spacing:.07em}
+  .dial-scale{height:72px}
+  .dial-spot{font-size:9px!important}
+
+  .live-decode{
+    height:auto;
+    min-height:260px;
+    max-height:420px
+  }
+  .decode-stream{max-height:360px}
+  .decode-item{
+    grid-template-columns:auto minmax(0,1fr) auto;
+    gap:7px;
+    padding:8px
+  }
+  .decode-call{font-size:12px}
+  .decode-item .flag{font-size:17px}
+  .decode-meta{font-size:7px}
+  .vote-row{gap:4px}
+  .vote-btn{
+    min-width:0;
+    flex:1;
+    padding:5px 5px;
+    font-size:7px
+  }
+
+  .chat-strip{
+    margin-top:7px;
+    min-height:190px;
+    max-height:330px
+  }
+  .chat-top{padding:8px 9px}
+  .chat-model{font-size:7px;padding:4px 6px}
+  .chat-list{max-height:180px;padding:7px}
+  .chat-compose{
+    grid-template-columns:minmax(0,1fr) 68px;
+    gap:6px;
+    padding:7px
+  }
+  .chat-compose button{width:68px;font-size:8px}
+  .chat-compose input{font-size:10px;padding-right:48px}
+  .chat-count{font-size:7px;right:8px}
+
+  .footer{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:6px 10px;
+    text-align:center;
+    font-size:7px
+  }
+  .country-roll{
+    order:3;
+    flex:1 0 100%;
+    width:100%
+  }
+  .footer-brand,.footer-links,.footer-stats{
+    justify-content:center;
+    white-space:normal
+  }
+
+  .modal-card{
+    width:100%;
+    max-height:94vh;
+    border-radius:14px;
+    padding:14px
+  }
+  .modal-card h2{font-size:15px}
+  .form-grid{grid-template-columns:1fr}
+  .season-card{padding:9px}
+  .merit-row{grid-template-columns:repeat(4,1fr)}
+}
+
+@media(max-width:390px){
+  .statuses{
+    grid-template-columns:minmax(74px,1fr) 34px minmax(42px,auto) 42px 34px
+  }
+  .brand small{max-width:260px}
+  .map-wrap{height:55vh;min-height:360px}
+  .map-focus-toggle button{font-size:6.5px}
+}
+
 </style>
 </head>
 <body>
@@ -781,9 +1099,9 @@ html[data-theme="light"] .moon-icon{display:none}
   <div class="chat-top">
     <div>
       <div class="chat-strip-title" id="chatStripTitle">CHAT CW LATAM</div>
-      <div class="chat-strip-sub" id="chatStripSub">Coordinación rápida · mensajes 24 h · sin sonidos</div>
+      <div class="chat-strip-sub" id="chatStripSub">24 h</div>
     </div>
-    <div class="chat-model" id="chatModelStats">MODELO · esperando datos</div>
+    <div class="chat-model" id="chatModelStats">🤖 CW BOT</div>
   </div>
 
   <div class="chat-list" id="chatList">
@@ -823,7 +1141,7 @@ html[data-theme="light"] .moon-icon{display:none}
   <div class="modal-card">
     <button class="modal-close" id="profileClose">×</button>
     <h2 id="profileTitle">MI ESTACIÓN</h2>
-    <p id="profileIntro">Indicativo + locator identifican tu estación. Si ya existe, recuperamos tu perfil; si no, lo creamos automáticamente. Podés editarlos cuando quieras.</p>
+    <p id="profileIntro"></p>
 
     <div class="form-grid">
       <div class="field">
@@ -838,7 +1156,7 @@ html[data-theme="light"] .moon-icon{display:none}
 
     <div class="watch-box" id="watchBox" style="display:none">
       <h3>MIS ALERTAS</h3>
-      <div class="verify-state" id="watchState">Ingresá tu indicativo y locator para guardar alertas personales.</div>
+      <div class="verify-state" id="watchState">Alertas por indicativo</div>
       <div class="watch-row">
         <input id="watchCall" maxlength="16" placeholder="Ej. VP8DX">
         <button id="watchAdd">AGREGAR</button>
@@ -884,7 +1202,7 @@ html[data-theme="light"] .moon-icon{display:none}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.25-community6-final";
+const CWLATAM_BUILD="2026.08.25-community7-polish";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const spots=[],active=new Map(),mapObjects=[],mapByCall=new Map();
@@ -1587,7 +1905,7 @@ function renderWatchlist(){
  const ready=Boolean(currentProfile&&sessionToken);
 
  box.style.display=ready?"block":"none";
- state.textContent="Los indicativos de esta lista generan una alerta CW cuando aparecen activos.";
+ state.textContent="Alerta CW cuando aparezcan activos.";
  state.classList.toggle("ok",ready);
  input.disabled=!ready;
  add.disabled=!ready;
@@ -1717,9 +2035,7 @@ function updateProfileUI(){
  btn.classList.toggle("active",!!currentProfile);
  btn.textContent=currentProfile?`${countryFlag(currentProfile.country_code)} ${currentProfile.callsign}`:"👤";
  document.getElementById("profileTitle").textContent=t("profile");
- document.getElementById("profileIntro").textContent=currentLang==="pt"
-   ?"Indicativo + locator identificam sua estação. Se já existir, recuperamos o perfil; caso contrário, criamos automaticamente. Você pode editá-los quando quiser."
-   :"Indicativo + locator identifican tu estación. Si ya existe, recuperamos tu perfil; si no, lo creamos automáticamente. Podés editarlos cuando quieras.";
+ document.getElementById("profileIntro").textContent="";
 
  const votes=Number(currentProfile?.votes_count||0);
  const unlockProgress=Math.min(100,votes);
@@ -1728,7 +2044,7 @@ function updateProfileUI(){
    ? (currentProfile.focus_unlocked
        ? `${currentProfile.callsign} · ${currentProfile.locator} · MI FOCO ✓ · ${votes} reportes totales`
        : `${currentProfile.callsign} · ${currentProfile.locator} · ${unlockProgress}/100 · faltan ${Math.max(0,100-unlockProgress)}`)
-   : t("needProfile");
+   : "";
 
  document.getElementById("guestActions").style.display=currentProfile?"none":"flex";
  document.getElementById("memberActions").style.display=currentProfile?"flex":"none";
@@ -1737,8 +2053,8 @@ function updateProfileUI(){
  renderSeasonUI();
 
  if(currentProfile){
-   document.getElementById("profileCall").value=currentProfile.callsign||"";
-   document.getElementById("profileLocator").value=currentProfile.locator||"";
+   document.getElementById("profileCall").value=String(currentProfile.callsign||"").toUpperCase();
+   document.getElementById("profileLocator").value=String(currentProfile.locator||"").toUpperCase();
  }
  renderActivity();
 }
@@ -1938,6 +2254,7 @@ async function loadChat(){
      .order("created_at",{ascending:false})
      .limit(80);
    renderChat((data||[]).reverse());
+   setTimeout(botLiveInsight,0);
  }catch{}
 }
 
@@ -1963,7 +2280,7 @@ function renderChat(messages){
    </div>`;
  }).join("");
 
- el.scrollLeft=el.scrollWidth;
+ el.scrollTop=el.scrollHeight;
 }
 function appendChat(m){
  const el=document.getElementById("chatList");
@@ -1984,7 +2301,7 @@ function appendChat(m){
      <div class="chat-text">${escapeHtml(m.message)}</div>
    </div>`);
 
- el.scrollLeft=el.scrollWidth;
+ el.scrollTop=el.scrollHeight;
 }
 function escapeHtml(s){
  return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
@@ -2029,6 +2346,60 @@ async function loadCountryStats(){
  }catch{}
 }
 
+
+function botLiveInsight(){
+ const el=document.getElementById("chatList");
+ if(!el)return;
+
+ const now=Date.now();
+ const current=[...active.entries()]
+   .filter(([,v])=>now-v.last<ACTIVE_MS)
+   .map(([call,v])=>({call,v}))
+   .sort((a,b)=>{
+     if(Boolean(b.v.isChannel)!==Boolean(a.v.isChannel))return b.v.isChannel?1:-1;
+     return b.v.spotters.size-a.v.spotters.size || b.v.last-a.v.last;
+   });
+
+ let text="";
+ if(!current.length){
+   text=currentLang==="pt"
+     ?"Radar tranquilo agora. Continuo observando os 40 m."
+     :"Radar tranquilo ahora. Sigo observando 40 m.";
+ }else{
+   const top=current[0];
+   const channel=current.find(x=>x.v.isChannel);
+   if(channel){
+     text=currentLang==="pt"
+       ? `7033 ativo: ${channel.call}, ouvido por ${channel.v.spotters.size} receptor${channel.v.spotters.size===1?"":"es"}.`
+       : `7033 activo: ${channel.call}, escuchado por ${channel.v.spotters.size} receptor${channel.v.spotters.size===1?"":"es"}.`;
+   }else{
+     text=currentLang==="pt"
+       ? `Agora vejo ${current.length} sinais. ${top.call} é o mais distribuído: ${top.v.spotters.size} receptores.`
+       : `Ahora veo ${current.length} señales. ${top.call} es la más distribuida: ${top.v.spotters.size} receptores.`;
+   }
+
+   if(modelStatsCache){
+     const votes=Number(modelStatsCache.votes||0);
+     const locs=Number(modelStatsCache.locators||0);
+     if(votes>0){
+       text += currentLang==="pt"
+         ? ` A comunidade já soma ${votes} relatórios em ${locs} locators.`
+         : ` La comunidad ya suma ${votes} reportes en ${locs} locators.`;
+     }
+   }
+ }
+
+ let bot=document.getElementById("localBotInsight");
+ if(!bot){
+   bot=document.createElement("div");
+   bot.id="localBotInsight";
+   bot.className="chat-msg bot";
+   el.appendChild(bot);
+ }
+ bot.innerHTML=`<div class="chat-head">🤖 <span class="chat-call">CW BOT</span> · AHORA</div><div class="chat-text">${escapeHtml(text)}</div>`;
+ el.scrollTop=el.scrollHeight;
+}
+
 async function loadModelStats(){
  try{
    const {data,error}=await sb.rpc("cw_get_model_stats");
@@ -2038,10 +2409,10 @@ async function loadModelStats(){
    const el=document.getElementById("chatModelStats");
    const evaluated=Number(data.evaluated_predictions||0);
    const accuracy=data.accuracy_pct;
-   const accText=evaluated>=10 && accuracy!==null && accuracy!==undefined
-     ? ` · precisión ${Math.round(Number(accuracy))}%/${evaluated}`
-     : " · precisión reuniendo muestra";
-   el.textContent=`MODELO · ${data.votes||0} reportes · ${data.locators||0} locators · ${data.zones||0} zonas${accText}`;
+   el.textContent=evaluated>=10 && accuracy!==null && accuracy!==undefined
+     ? `🤖 CW BOT · ${Math.round(Number(accuracy))}%`
+     : "🤖 CW BOT";
+   botLiveInsight();
  }catch{}
 }
 
@@ -2069,9 +2440,7 @@ function applyLanguage(){
    ?"Escreva uma mensagem para a comunidade…"
    :"Escribí un mensaje para la comunidad…";
  const chatSub=document.getElementById("chatStripSub");
- if(chatSub)chatSub.textContent=currentLang==="pt"
-   ?"Coordenação rápida · mensagens 24 h · sem sons"
-   :"Coordinación rápida · mensajes 24 h · sin sonidos";
+ if(chatSub)chatSub.textContent="24 h";
  document.getElementById("chatSend").textContent=t("send");
  document.getElementById("globalBtn").textContent=t("region");
  document.getElementById("focusBtn").textContent=t("focus");
@@ -2091,6 +2460,18 @@ function applyLanguage(){
  renderActivity();
  if(communityStatsCache)loadCommunityStats();
 }
+
+
+["profileCall","profileLocator","watchCall"].forEach(id=>{
+ const el=document.getElementById(id);
+ if(!el)return;
+ el.addEventListener("input",()=>{
+   const start=el.selectionStart;
+   const end=el.selectionEnd;
+   el.value=el.value.toUpperCase().replace(/\s+/g,"");
+   try{el.setSelectionRange(start,end)}catch{}
+ });
+});
 
 document.getElementById("watchAdd").addEventListener("click",addWatch);
 document.getElementById("watchCall").addEventListener("keydown",e=>{if(e.key==="Enter")addWatch()});
@@ -2131,6 +2512,8 @@ document.getElementById("langToggle").addEventListener("click",()=>{
  setInterval(loadCommunityStats,60000);
  setInterval(loadCountryStats,120000);
  setInterval(loadModelStats,60000);
+ setInterval(botLiveInsight,45000);
+ setTimeout(botLiveInsight,1800);
 })();
 
 // ---- ALERTA SONORA DEL CANAL 7033 ------------------------------------------
