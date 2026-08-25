@@ -1731,7 +1731,7 @@ body.has-profile .side-tabs{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.25-release-final";
+const CWLATAM_BUILD="2026.08.25-release-datafuture1";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -1816,7 +1816,8 @@ function valid(s){
    && s.freq>=7000
    && s.freq<=7300
    && isSA(s.spotter)
-   && age>=0
+   // Toleramos hasta 2 min de diferencia entre reloj del navegador y servidor.
+   && age>=-120000
    && age<=ACTIVE_MS;
 }
 function ageText(ms){const sec=Math.max(0,Math.floor(ms/1000));return sec<60?sec+"s":Math.floor(sec/60)+"m"}
@@ -1925,7 +1926,12 @@ function addSpot(raw){
    prev.type=s.type;
    prev.best=Math.max(prev.best,s.snr);
    prev.totalSpots=(prev.totalSpots||0)+1;
-   prev.spotters.set(s.spotter,s.ts);
+   prev.spotters.set(s.spotter,{
+     ts:s.ts,
+     snr:s.snr,
+     seq:s.seq||null,
+     frequency:s.actualFreq||s.freq
+   });
    prev.lastSpot=s;
 
    active.set(s.dx,prev);
@@ -2060,7 +2066,8 @@ function pruneMap(){
 function prune(){
  const now=Date.now();
  for(const[k,v]of active){
-   for(const [spotter,ts] of v.spotters){
+   for(const [spotter,raw] of v.spotters){
+     const ts=(raw&&typeof raw==="object")?Number(raw.ts||0):Number(raw||0);
      if(now-ts>ACTIVE_MS)v.spotters.delete(spotter);
    }
    if(now-v.last>ACTIVE_MS || v.spotters.size===0){
@@ -2105,7 +2112,76 @@ function focusMetrics(v){
  return {inside,weighted};
 }
 
-function setFocusMode(on){
+
+function networkSnapshot(v){
+ const cutoff=Date.now()-ACTIVE_MS;
+ return [...v.spotters.entries()]
+   .map(([call,raw])=>{
+     const d=(raw&&typeof raw==="object")?raw:{ts:Number(raw||0)};
+     return {
+       call:String(call||"").toUpperCase(),
+       snr:Number(d.snr??0),
+       seq:Number(d.seq||0)||null,
+       frequency:Number(d.frequency||0)||null,
+       ts:Number(d.ts||0)
+     };
+   })
+   .filter(x=>x.call&&x.ts>=cutoff)
+   .sort((a,b)=>b.snr-a.snr)
+   .slice(0,32);
+}
+
+function networkMedianSnr(v){
+ const vals=networkSnapshot(v).map(x=>x.snr).filter(Number.isFinite).sort((a,b)=>a-b);
+ if(!vals.length)return Number(v.lastSpot?.snr||0);
+ const mid=Math.floor(vals.length/2);
+ return vals.length%2 ? vals[mid] : (vals[mid-1]+vals[mid])/2;
+}
+
+let mapFocusSaveTimer=null;
+const EXPECTED_DB_SCHEMA="cwlatam-data-v1";
+
+async function saveMapFocus(enabled=focusMode){
+ if(!currentProfile||!sessionToken)return;
+ clearTimeout(mapFocusSaveTimer);
+ mapFocusSaveTimer=setTimeout(async()=>{
+   try{
+     const c=map.getCenter();
+     await sb.rpc("cw_set_map_focus",{
+       p_token:sessionToken,
+       p_lat:Number(c.lat),
+       p_lon:Number(c.lng),
+       p_zoom:Math.round(map.getZoom()),
+       p_enabled:Boolean(enabled)
+     });
+   }catch{}
+ },700);
+}
+
+async function restoreMapFocus(){
+ if(!currentProfile||!sessionToken)return;
+ try{
+   const {data,error}=await sb.rpc("cw_get_map_focus",{p_token:sessionToken});
+   if(error||!data?.ok||!data?.saved)return;
+   const lat=Number(data.lat),lon=Number(data.lon),zoom=Number(data.zoom||3);
+   if(Number.isFinite(lat)&&Number.isFinite(lon)){
+     map.setView([lat,lon],Math.max(2,Math.min(18,zoom)),{animate:false});
+     if(data.enabled)setFocusMode(true,false);
+   }
+ }catch{}
+}
+
+async function checkDbSchema(){
+ try{
+   const {data,error}=await sb.rpc("cw_system_info");
+   if(error||!data)return;
+   if(data.schema_version!==EXPECTED_DB_SCHEMA){
+     console.warn("CW LATAM DB schema distinto al esperado",data.schema_version,EXPECTED_DB_SCHEMA);
+   }
+ }catch{}
+}
+
+function setFocusMode(on,persist=true){
  focusMode=Boolean(on);
  personalMode=false;
 
@@ -2136,6 +2212,7 @@ function setFocusMode(on){
    focusCircle=null;
  }
 
+ if(persist)saveMapFocus(focusMode);
  renderActivity();
 }
 
@@ -2146,6 +2223,7 @@ map.on("moveend zoomend",()=>{
  if(focusMode){
    if(focusCircle) focusCircle.setLatLng(map.getCenter());
    renderActivity();
+   saveMapFocus(true);
  }
 });
 
@@ -2465,6 +2543,7 @@ async function restoreProfile(){
    }
    currentProfile=data.profile;
    setSideTab("activity");
+   await restoreMapFocus();
    await loadRecentVotes();
    await loadWatchlist();
    await loadSeasonData();
@@ -2821,10 +2900,13 @@ function renderSeasonUI(){
    const meta=SEASON_META[s];
    const a=earnedBySeason[s];
    const isCurrent=s===currentSeason;
-   return `<div class="merit ${a?"on":""}" style="${isCurrent?"border-color:rgba(255,200,92,.32)":""}">
+   const earnedNow=isCurrent
+     ? Boolean(a&&Number(a.season_year)===Number(currentLatamSeasonYear()))
+     : Boolean(a);
+   return `<div class="merit ${earnedNow?"on":""}" style="${isCurrent?"border-color:rgba(255,200,92,.32)":""}">
      <span class="ico">${meta.icon}</span>
      <div class="name">${currentLang==="pt"?meta.pt:meta.es}</div>
-     <div class="year">${a?a.season_year:(isCurrent?"ACTIVA":"—")}</div>
+     <div class="year">${earnedNow&&a?a.season_year:(isCurrent?"ACTIVA":"—")}</div>
    </div>`;
  }).join("");
 
@@ -2952,6 +3034,7 @@ async function profileAction(mode){
    currentProfile=data?.profile||currentProfile;
    setSideTab("activity");
 
+   await restoreMapFocus();
    await loadRecentVotes();
    await loadWatchlist();
    await loadSeasonData();
@@ -2992,14 +3075,16 @@ async function voteCall(call,rating){
  const v=active.get(call);
  if(!v)return;
  try{
-   const {data,error}=await sb.rpc("cw_vote",{
+   const snapshot=networkSnapshot(v);
+   const {data,error}=await sb.rpc("cw_vote_v2",{
      p_token:sessionToken,
      p_dx_call:call,
      p_frequency:Number(v.actualFreq||v.freq),
      p_rating:rating,
-     p_snr:Number(v.lastSpot?.snr||0),
-     p_spotter_count:v.spotters.size,
-     p_spot_seq:Number(v.lastSpot?.seq||0)||null
+     p_snr:networkMedianSnr(v),
+     p_spotter_count:snapshot.length,
+     p_spot_seq:Number(v.lastSpot?.seq||0)||null,
+     p_network_snapshot:snapshot
    });
    if(error)throw error;
    currentProfile.votes_count=data.votes_count;
@@ -3026,8 +3111,12 @@ async function voteCall(call,rating){
 window.voteCall=voteCall;
 
 function schedulePersonalFocusRefresh(){
- clearTimeout(personalFocusTimer);
- personalFocusTimer=setTimeout(refreshPersonalFocus,350);
+ // Throttle: garantiza recalcular incluso con spots entrando continuamente.
+ if(personalFocusTimer)return;
+ personalFocusTimer=setTimeout(async()=>{
+   personalFocusTimer=null;
+   await refreshPersonalFocus();
+ },650);
 }
 
 async function refreshPersonalFocus(){
@@ -3036,8 +3125,8 @@ async function refreshPersonalFocus(){
  const candidates=[...active.entries()].map(([call,v])=>({
    dx_call:call,
    frequency:Number(v.actualFreq||v.freq),
-   snr:Number(v.lastSpot?.snr||0),
-   spotter_count:v.spotters.size
+   snr:networkMedianSnr(v),
+   spotter_count:networkSnapshot(v).length
  }));
  if(!candidates.length)return;
  try{
@@ -3342,6 +3431,7 @@ document.getElementById("langToggle").addEventListener("click",()=>{
 });
 
 (async()=>{
+ void checkDbSchema();
  setSideTab("activity");
  await recordVisit();
  await restoreProfile();
@@ -3518,6 +3608,7 @@ const RBN_WS_URL = window.CW_LATAM_WS_URL || "wss://cw-latam.onrender.com";
 let rbnSocket=null;
 let reconnectTimer=null;
 let lastServerMessageAt=0;
+let lastServerSpotAt=0;
 let clientWatchdogTimer=null;
 const CLIENT_WATCHDOG_MS=40000;
 
@@ -3602,6 +3693,8 @@ function connectRBN(){
          if(document.getElementById("liveState")?.textContent!=="EN VIVO"){
            setLiveState("EN VIVO");
          }
+         const serverSeq=Number(payload.lastSeq||0);
+         if(serverSeq>lastSpotSeq)void pollLiveSpots(true);
          return;
        }
 
@@ -3614,12 +3707,15 @@ function connectRBN(){
          restoringHistory=true;
          payload.spots.forEach(addSpot);
          restoringHistory=false;
+         if(payload.spots.length)lastServerSpotAt=Date.now();
          return;
        }
 
        if(Array.isArray(payload)){
+         if(payload.some(x=>x&&x.dx))lastServerSpotAt=Date.now();
          payload.forEach(addSpot);
        }else{
+         if(payload&&payload.dx)lastServerSpotAt=Date.now();
          addSpot(payload);
        }
      }catch(err){
@@ -3644,17 +3740,17 @@ function connectRBN(){
  }
 }
 
-async function pollLiveSpots(){
+async function pollLiveSpots(force=false){
  if(document.hidden)return;
  if(pollBusy)return;
 
  const wsFresh=
    rbnSocket &&
    rbnSocket.readyState===WebSocket.OPEN &&
-   lastServerMessageAt &&
-   (Date.now()-lastServerMessageAt)<HTTP_SKIP_IF_WS_FRESH_MS;
+   lastServerSpotAt &&
+   (Date.now()-lastServerSpotAt)<HTTP_SKIP_IF_WS_FRESH_MS;
 
- if(wsFresh)return;
+ if(wsFresh&&!force)return;
 
  pollBusy=true;
 
@@ -3711,9 +3807,9 @@ setTimeout(pollLiveSpots,500);
 
 
 document.addEventListener("visibilitychange",()=>{
- if(!document.hidden)pollLiveSpots();
+ if(!document.hidden)pollLiveSpots(false);
 });
-window.addEventListener("focus",pollLiveSpots);
+window.addEventListener("focus",()=>pollLiveSpots(false));
 
 window.CWLATAM={
  build: CWLATAM_BUILD,
