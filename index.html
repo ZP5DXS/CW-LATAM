@@ -1731,7 +1731,7 @@ body.has-profile .side-tabs{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.25-release-datafuture1";
+const CWLATAM_BUILD="2026.08.25-report-save-fix";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -3071,12 +3071,25 @@ function handleVoteClick(call,rating){
 window.handleVoteClick=handleVoteClick;
 
 async function voteCall(call,rating){
- if(!currentProfile||!sessionToken){openProfileModal();showToast(t("needProfile"));return}
+ if(!currentProfile||!sessionToken){
+   openProfileModal();
+   showToast(t("needProfile"));
+   return;
+ }
+
  const v=active.get(call);
  if(!v)return;
+
+ const snapshot=networkSnapshot(v);
+
+ // IMPORTANTE:
+ // El guardado en DB y el refresco visual se manejan por separado.
+ // Así un fallo de ranking/recompensas/UI no puede mostrarse como
+ // "Error al guardar" cuando el reporte sí llegó correctamente.
+ let data=null;
+
  try{
-   const snapshot=networkSnapshot(v);
-   const {data,error}=await sb.rpc("cw_vote_v2",{
+   const result=await sb.rpc("cw_vote_v2",{
      p_token:sessionToken,
      p_dx_call:call,
      p_frequency:Number(v.actualFreq||v.freq),
@@ -3086,27 +3099,82 @@ async function voteCall(call,rating){
      p_spot_seq:Number(v.lastSpot?.seq||0)||null,
      p_network_snapshot:snapshot
    });
-   if(error)throw error;
-   currentProfile.votes_count=data.votes_count;
-   currentProfile.focus_unlocked=data.focus_unlocked;
-   currentProfile.focus_unlocked_at=data.focus_unlocked_at||currentProfile.focus_unlocked_at;
-   votedCalls.set(String(call).toUpperCase(),Number(rating));
-   await loadSeasonData();
-   updateProfileUI();
 
-   if(data.focus_unlocked){
-     const sc=Number(data?.season?.count||0);
-     showToast(sc>=50
-       ? `${t("voteSaved")} · ${data.votes_count} reportes · mérito ${data.season.season} ✓`
-       : `${t("voteSaved")} · ${data.votes_count} reportes · ${Math.min(50,sc)}/50 ${data?.season?.season||""}`);
-   }else{
-     showToast(`${t("voteSaved")} · ${Math.min(100,data.votes_count)}/100`);
+   if(result.error){
+     console.error("CW LATAM · cw_vote_v2 ERROR",{
+       call,
+       rating,
+       error:result.error,
+       snapshotCount:snapshot.length
+     });
+     throw result.error;
    }
-   if(data.counted&&data.votes_count%10===0){
-     void sb.rpc("cw_rebuild_my_affinities",{p_token:sessionToken}).then(()=>{},()=>{});
+
+   data=result.data;
+
+   if(!data || data.ok===false){
+     console.warn("CW LATAM · cw_vote_v2 respuesta inesperada",data);
    }
-   if(personalMode)refreshPersonalFocus();
- }catch{showToast("Error al guardar el reporte")}
+
+ }catch(err){
+   console.error("CW LATAM · reporte NO guardado",err);
+   showToast("Error al guardar el reporte");
+   return;
+ }
+
+ // Desde este punto el RPC terminó sin error:
+ // consideramos el reporte guardado aunque falle algún refresco secundario.
+ votedCalls.set(String(call).toUpperCase(),Number(rating));
+
+ if(data && typeof data==="object"){
+   if(Number.isFinite(Number(data.votes_count))){
+     currentProfile.votes_count=Number(data.votes_count);
+   }
+   if(typeof data.focus_unlocked==="boolean"){
+     currentProfile.focus_unlocked=data.focus_unlocked;
+   }
+   if(data.focus_unlocked_at){
+     currentProfile.focus_unlocked_at=data.focus_unlocked_at;
+   }
+ }
+
+ // Feedback de éxito inmediatamente, sin depender de rankings/recompensas.
+ const votes=Number(currentProfile?.votes_count||0);
+ const unlocked=Boolean(currentProfile?.focus_unlocked);
+ const season=data?.season||null;
+
+ if(unlocked && season){
+   const sc=Number(season.count||0);
+   showToast(sc>=50
+     ? `${t("voteSaved")} · ${votes} reportes · mérito ${season.season||""} ✓`
+     : `${t("voteSaved")} · ${votes} reportes · ${Math.min(50,sc)}/50 ${season.season||""}`);
+ }else{
+   showToast(`${t("voteSaved")} · ${Math.min(100,votes)}/100`);
+ }
+
+ // Refrescos secundarios: ninguno puede convertir un guardado correcto en error.
+ try{
+   updateProfileUI();
+ }catch(err){
+   console.error("CW LATAM · updateProfileUI después del voto",err);
+ }
+
+ void loadSeasonData().catch?.(err=>{
+   console.error("CW LATAM · loadSeasonData después del voto",err);
+ });
+
+ if(data?.counted && votes>0 && votes%10===0){
+   void sb.rpc("cw_rebuild_my_affinities",{p_token:sessionToken})
+     .then(({error})=>{
+       if(error)console.warn("CW LATAM · afinidades",error);
+     })
+     .catch(err=>console.warn("CW LATAM · afinidades",err));
+ }
+
+ if(personalMode){
+   try{refreshPersonalFocus()}
+   catch(err){console.warn("CW LATAM · MI FOCO refresh",err)}
+ }
 }
 window.voteCall=voteCall;
 
