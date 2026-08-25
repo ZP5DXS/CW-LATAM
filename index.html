@@ -988,6 +988,50 @@ html[data-theme="light"] .moon-icon{display:none}
   .map-focus-toggle button{font-size:6.5px}
 }
 
+
+/* ===== COMMUNITY 8 · COLLABORATION RANKING ===== */
+.community-rank-meta{
+  margin-top:7px;
+  font:800 9px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color:var(--muted)
+}
+.global-leaderboard{
+  margin-top:9px;
+  padding-top:8px
+}
+.global-leaderboard .lb-row:nth-child(1) .lb-rank{color:#ffd65a}
+.global-leaderboard .lb-row:nth-child(2) .lb-rank{color:#c9d2d8}
+.global-leaderboard .lb-row:nth-child(3) .lb-rank{color:#d49b64}
+.reward-divider{
+  height:1px;
+  margin:12px 0;
+  background:linear-gradient(90deg,transparent,var(--line),transparent)
+}
+.rewards-head{align-items:center}
+.reward-lock{
+  min-width:36px;
+  text-align:center;
+  font-size:15px;
+  opacity:.58
+}
+.reward-lock.on{opacity:1;color:var(--green)}
+.seasonal-board{margin-top:10px}
+.season-card.locked .merit{opacity:.22}
+.season-card.locked .season-progress i{background:var(--green)}
+.lb-report-label{
+  color:var(--muted);
+  font-size:7px;
+  margin-left:3px
+}
+@media(max-width:700px){
+  .season-card{margin-top:10px}
+  .lb-row{
+    grid-template-columns:24px minmax(0,1fr) auto!important;
+    gap:5px
+  }
+  .lb-loc{font-size:6.5px}
+}
+
 </style>
 </head>
 <body>
@@ -1170,16 +1214,34 @@ html[data-theme="light"] .moon-icon{display:none}
     <div class="season-card" id="seasonCard" style="display:none">
       <div class="season-head">
         <div>
-          <div class="season-kicker">ACTIVIDAD ESTACIONAL</div>
-          <div class="season-title" id="seasonTitle">—</div>
+          <div class="season-kicker">COLABORACIÓN CW LATAM</div>
+          <div class="season-title">🏆 RANKING DE OPERADORES</div>
         </div>
-        <div class="season-rank" id="seasonRank">#—</div>
+        <div class="season-rank" id="globalRank">#—</div>
       </div>
+
+      <div class="community-rank-meta" id="globalRankMeta">—</div>
+      <div class="leaderboard global-leaderboard">
+        <div class="leaderboard-title">TOP 3 · REPORTES APORTADOS</div>
+        <div id="globalLeaderboardList" class="leaderboard-list">—</div>
+      </div>
+
+      <div class="reward-divider"></div>
+
+      <div class="season-head rewards-head">
+        <div>
+          <div class="season-kicker">RECOMPENSAS</div>
+          <div class="season-title" id="seasonTitle">ENTRENANDO MI FOCO</div>
+        </div>
+        <div class="reward-lock" id="rewardLock">🔒</div>
+      </div>
+
       <div class="season-progress"><i id="seasonProgressBar"></i></div>
       <div class="season-meta" id="seasonMeta">—</div>
       <div class="merit-row" id="meritRow"></div>
-      <div class="leaderboard">
-        <div class="leaderboard-title">🏆 LEADERBOARD · TEMPORADA ACTUAL</div>
+
+      <div class="leaderboard seasonal-board" id="seasonalBoard" style="display:none">
+        <div class="leaderboard-title">TEMPORADA ACTUAL</div>
         <div id="leaderboardList" class="leaderboard-list">—</div>
       </div>
     </div>
@@ -1202,7 +1264,7 @@ html[data-theme="light"] .moon-icon{display:none}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.25-community7-polish";
+const CWLATAM_BUILD="2026.08.25-community8-ranking";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const spots=[],active=new Map(),mapObjects=[],mapByCall=new Map();
@@ -1737,6 +1799,7 @@ let communityStatsCache=null;
 let countryStatsCache=[];
 let modelStatsCache=null;
 let seasonStatusCache=null;
+let collaborationLeaderboardCache=null;
 let seasonLeaderboardCache=null;
 const votedCalls=new Map();
 const watchlist=new Set();
@@ -1962,30 +2025,108 @@ async function loadSeasonData(){
  if(!currentProfile||!sessionToken){
    seasonStatusCache=null;
    seasonLeaderboardCache=null;
+   collaborationLeaderboardCache=null;
    renderSeasonUI();
    return;
  }
+
  try{
-   const [statusRes,leaderRes]=await Promise.all([
-     sb.rpc("cw_get_season_status",{p_token:sessionToken}),
-     sb.rpc("cw_get_season_leaderboard",{p_limit:12})
-   ]);
+   const jobs=[
+     sb.rpc("cw_get_collaboration_leaderboard",{p_token:sessionToken,p_limit:3})
+   ];
+
+   // Las RPC estacionales se consultan también antes de 100 para poder
+   // mostrar los méritos bloqueados y pasar automáticamente al modo estacional.
+   jobs.push(sb.rpc("cw_get_season_status",{p_token:sessionToken}));
+   jobs.push(sb.rpc("cw_get_season_leaderboard",{p_limit:3}));
+
+   const [globalRes,statusRes,leaderRes]=await Promise.all(jobs);
+
+   if(!globalRes.error)collaborationLeaderboardCache=globalRes.data;
    if(!statusRes.error)seasonStatusCache=statusRes.data;
    if(!leaderRes.error)seasonLeaderboardCache=leaderRes.data;
+
    renderSeasonUI();
- }catch{}
+ }catch(err){
+   console.warn("Ranking CW LATAM:",err);
+   renderSeasonUI();
+ }
 }
 
 function renderSeasonUI(){
  const card=document.getElementById("seasonCard");
  if(!card)return;
 
- if(!currentProfile?.focus_unlocked){
+ if(!currentProfile){
    card.style.display="none";
    return;
  }
 
  card.style.display="block";
+
+ // ---------------- GLOBAL COLLABORATION RANKING ----------------
+ const global=collaborationLeaderboardCache||{};
+ const top=Array.isArray(global.top)?global.top:[];
+ const me=global.me||{};
+ const totalParticipants=Number(global.participants||0);
+
+ document.getElementById("globalRank").textContent=me.rank?`#${me.rank}`:"#—";
+ document.getElementById("globalRankMeta").textContent=
+   `${Number(currentProfile.votes_count||0)} reportes · ${totalParticipants} operador${totalParticipants===1?"":"es"} participando`;
+
+ document.getElementById("globalLeaderboardList").innerHTML=top.length
+   ? top.map(x=>`<div class="lb-row ${String(x.callsign).toUpperCase()===String(currentProfile.callsign).toUpperCase()?"me":""}">
+       <div class="lb-rank">#${x.rank}</div>
+       <div>
+         <div class="lb-call">${countryFlag(x.country_code)} ${x.callsign}</div>
+         <div class="lb-loc">${x.locator||"—"}</div>
+       </div>
+       <div class="lb-score">${x.reports||0}<span class="lb-report-label"> rpt</span></div>
+     </div>`).join("")
+   : '<div class="empty">Todavía no hay clasificación.</div>';
+
+ // ---------------- REWARDS / SEASON ----------------
+ const votes=Number(currentProfile.votes_count||0);
+ const unlocked=Boolean(currentProfile.focus_unlocked);
+ card.classList.toggle("locked",!unlocked);
+
+ const meritOrder=["VERANO","OTOÑO","INVIERNO","PRIMAVERA"];
+ const achievements=seasonStatusCache?.achievements||[];
+ const latest={};
+
+ for(const a of achievements){
+   if(!latest[a.season] || Number(a.season_year)>Number(latest[a.season].season_year)){
+     latest[a.season]=a;
+   }
+ }
+
+ document.getElementById("meritRow").innerHTML=meritOrder.map(s=>{
+   const meta=SEASON_META[s];
+   const a=latest[s];
+   return `<div class="merit ${a?"on":""}">
+     <span class="ico">${meta.icon}</span>
+     <div class="name">${currentLang==="pt"?meta.pt:meta.es}</div>
+     <div class="year">${a?a.season_year:"—"}</div>
+   </div>`;
+ }).join("");
+
+ const lock=document.getElementById("rewardLock");
+ const seasonalBoard=document.getElementById("seasonalBoard");
+
+ if(!unlocked){
+   const shown=Math.min(100,votes);
+   document.getElementById("seasonTitle").textContent="🤖 MI FOCO";
+   document.getElementById("seasonProgressBar").style.width=`${shown}%`;
+   document.getElementById("seasonMeta").textContent=
+     `${shown}/100 · faltan ${Math.max(0,100-shown)} reportes para desbloquear MI FOCO y los méritos estacionales`;
+   lock.textContent="🔒";
+   lock.classList.remove("on");
+   seasonalBoard.style.display="none";
+   return;
+ }
+
+ lock.textContent="✓";
+ lock.classList.add("on");
 
  const cur=seasonStatusCache?.current||{};
  const season=cur.season||seasonLeaderboardCache?.season||"—";
@@ -1997,37 +2138,21 @@ function renderSeasonUI(){
  document.getElementById("seasonTitle").textContent=`${seasonLabel(season)} ${year}`;
  document.getElementById("seasonProgressBar").style.width=`${Math.min(100,(shown/target)*100)}%`;
  document.getElementById("seasonMeta").textContent=count>=target
-   ? `${target}/${target} · mérito completado · ${currentProfile.votes_count||0} reportes totales`
-   : `${shown}/${target} · faltan ${Math.max(0,target-shown)} para el mérito · ${currentProfile.votes_count||0} reportes totales`;
- document.getElementById("seasonRank").textContent=seasonStatusCache?.rank?`#${seasonStatusCache.rank}`:"#—";
-
- const achievements=seasonStatusCache?.achievements||[];
- const latest={};
- for(const a of achievements){
-   if(!latest[a.season] || Number(a.season_year)>Number(latest[a.season].season_year))latest[a.season]=a;
- }
-
- const meritOrder=["VERANO","OTOÑO","INVIERNO","PRIMAVERA"];
- document.getElementById("meritRow").innerHTML=meritOrder.map(s=>{
-   const meta=SEASON_META[s];
-   const a=latest[s];
-   return `<div class="merit ${a?"on":""}">
-     <span class="ico">${meta.icon}</span>
-     <div class="name">${currentLang==="pt"?meta.pt:meta.es}</div>
-     <div class="year">${a?a.season_year:"—"}</div>
-   </div>`;
- }).join("");
+   ? `${target}/${target} · mérito completado · ${votes} reportes totales`
+   : `${shown}/${target} · faltan ${Math.max(0,target-shown)} para el mérito · ${votes} reportes totales`;
 
  const leaders=seasonLeaderboardCache?.leaders||[];
- const me=String(currentProfile?.callsign||"").toUpperCase();
+ seasonalBoard.style.display="block";
  document.getElementById("leaderboardList").innerHTML=leaders.length
-   ? leaders.map(x=>`<div class="lb-row ${String(x.callsign).toUpperCase()===me?"me":""}">
+   ? leaders.map(x=>`<div class="lb-row ${String(x.callsign).toUpperCase()===String(currentProfile.callsign).toUpperCase()?"me":""}">
        <div class="lb-rank">#${x.rank}</div>
-       <div><div class="lb-call">${countryFlag(x.country_code)} ${x.callsign}</div><div class="lb-loc">${x.locator}</div></div>
-       <div>🏅 ${x.merits||0}</div>
-       <div class="lb-score">${x.reports||0}</div>
+       <div>
+         <div class="lb-call">${countryFlag(x.country_code)} ${x.callsign}</div>
+         <div class="lb-loc">${x.locator||"—"}</div>
+       </div>
+       <div class="lb-score">${x.reports||0}<span class="lb-report-label"> rpt</span></div>
      </div>`).join("")
-   : '<div class="empty">Sin clasificación todavía.</div>';
+   : '<div class="empty">Sin actividad estacional todavía.</div>';
 }
 
 function updateProfileUI(){
