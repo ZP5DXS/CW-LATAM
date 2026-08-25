@@ -1032,6 +1032,209 @@ html[data-theme="light"] .moon-icon{display:none}
   .lb-loc{font-size:6.5px}
 }
 
+
+/* ===== COMMUNITY 9 · PUBLIC RANKING / COMPACT ACTIVITY ===== */
+.live-decode{
+  display:grid;
+  grid-template-rows:auto auto minmax(0,1fr);
+}
+.public-rank{
+  padding:10px 11px 9px;
+  border-bottom:1px solid var(--line);
+  background:
+    radial-gradient(circle at 10% 0%,rgba(255,200,92,.055),transparent 44%),
+    linear-gradient(180deg,rgba(255,255,255,.012),transparent)
+}
+.public-rank-head{
+  display:flex;align-items:center;justify-content:space-between;gap:9px;margin-bottom:8px
+}
+.public-rank-kicker{
+  color:var(--muted);font-size:7px;font-weight:900;letter-spacing:.13em
+}
+.public-rank-title{
+  margin-top:2px;font-size:11px;font-weight:900;letter-spacing:.06em
+}
+.public-rank-join{
+  border:1px solid rgba(88,255,146,.26);border-radius:999px;
+  background:rgba(88,255,146,.055);color:var(--green);
+  padding:5px 9px;font:900 7px ui-sans-serif,system-ui;letter-spacing:.08em;cursor:pointer
+}
+.public-rank-list{display:flex;flex-direction:column;gap:4px}
+.public-rank-row{
+  display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;
+  gap:6px;min-height:28px;padding:5px 7px;border-radius:8px;
+  background:rgba(255,255,255,.018);border:1px solid transparent
+}
+.public-rank-row.me{
+  border-color:rgba(88,255,146,.28);background:rgba(88,255,146,.045)
+}
+.public-rank-pos{color:var(--amber);font:900 8px ui-monospace,monospace}
+.public-rank-call{
+  font-size:9px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+.public-rank-loc{
+  display:block;margin-top:1px;color:var(--muted);font:700 6.5px ui-monospace,monospace
+}
+.public-rank-score{color:var(--green);font:900 8px ui-monospace,monospace}
+.public-rank-me{
+  margin-top:7px;color:var(--muted);font:700 7px ui-monospace,monospace;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+.empty.compact{padding:9px}
+.activity-compact-head{padding-top:7px;padding-bottom:7px}
+.live-decode .decode-stream{padding:8px;gap:6px;overflow:auto}
+.live-decode .decode-item{padding:7px 8px}
+.live-decode .decode-call{font-size:12px}
+.live-decode .decode-item .flag{font-size:17px}
+.live-decode .decode-meta{font-size:7px}
+.live-decode .vote-btn{padding:4px 6px}
+
+/* Dial hover */
+.dial-scale{cursor:crosshair}
+.dial-hover-readout{
+  display:none;position:absolute;z-index:20;top:5px;transform:translateX(-50%);
+  pointer-events:none;padding:4px 7px;border:1px solid rgba(88,255,146,.32);
+  border-radius:7px;background:rgba(3,12,7,.94);color:var(--green);
+  box-shadow:0 7px 20px rgba(0,0,0,.25);
+  font:900 8px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:nowrap
+}
+html[data-theme="light"] .dial-hover-readout{background:rgba(248,251,249,.96)}
+
+@media(max-width:980px){
+  .live-decode{display:grid;grid-template-rows:auto auto auto}
+}
+
+@media(max-width:700px){
+  /* Leaflet zoom is upper-left. Put RADAR CW upper-right. */
+  .map-badge{
+    left:auto!important;right:8px!important;top:58px!important;
+    max-width:145px;text-align:right
+  }
+
+  .live-decode{min-height:0!important;max-height:none!important}
+  .public-rank{padding:8px}
+  .public-rank-title{font-size:10px}
+  .public-rank-row{min-height:26px;padding:4px 6px}
+  .public-rank-me{font-size:6.5px}
+  .live-decode .decode-stream{max-height:none!important;overflow:visible}
+}
+
+@media(max-width:390px){
+  .map-badge{top:55px!important;right:7px!important}
+}
+
+
+/* ===== COMMUNITY 10 · TABBED SIDE PANEL ===== */
+.live-decode{
+  display:flex!important;
+  flex-direction:column!important;
+  height:calc(100vh - 82px);
+  min-height:520px;
+  max-height:820px
+}
+.side-tabs{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:0;
+  border-bottom:1px solid var(--line);
+  background:rgba(255,255,255,.012)
+}
+.side-tab{
+  min-height:38px;
+  border:0;
+  border-right:1px solid var(--line);
+  background:transparent;
+  color:var(--muted);
+  font:900 8px ui-sans-serif,system-ui;
+  letter-spacing:.08em;
+  cursor:pointer
+}
+.side-tab:last-child{border-right:0}
+.side-tab.active{
+  color:var(--green);
+  background:rgba(88,255,146,.045);
+  box-shadow:inset 0 -2px 0 rgba(88,255,146,.55)
+}
+.side-view{display:none;min-height:0;flex:1}
+.side-view.active{display:flex;flex-direction:column}
+#viewActivity .decode-stream{flex:1;min-height:0;overflow:auto}
+.rank-glance{
+  min-height:0;
+  padding:7px 8px;
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(90deg,rgba(255,200,92,.035),transparent)
+}
+.rank-glance-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:4px
+}
+.rank-glance-item{
+  display:grid;
+  grid-template-columns:20px minmax(0,1fr) auto;
+  align-items:center;
+  gap:4px;
+  min-width:0;
+  padding:4px 5px;
+  border-radius:7px;
+  background:rgba(255,255,255,.015)
+}
+.rank-glance-item.me{
+  border:1px solid rgba(88,255,146,.24);
+  background:rgba(88,255,146,.045)
+}
+.rank-glance-pos{color:var(--amber);font:900 7px ui-monospace,monospace}
+.rank-glance-call{font:900 7.5px ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis}
+.rank-glance-score{color:var(--green);font:900 7px ui-monospace,monospace}
+
+.stats-view-head{
+  padding:11px 12px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px
+}
+.stats-block{padding:10px 11px}
+.stats-block + .stats-block{border-top:1px solid var(--line)}
+.contextual-rank{padding-top:11px}
+#viewStats{overflow:auto}
+#viewRewards{overflow:auto}
+.rewards-panel-card{padding:11px}
+#viewRewards .merit-row{margin-top:11px}
+#viewRewards .seasonal-board{margin-top:12px}
+
+@media(max-width:980px){
+  .live-decode{
+    height:auto!important;
+    min-height:360px!important;
+    max-height:none!important
+  }
+}
+@media(max-width:700px){
+  .side-tab{min-height:36px;font-size:7px}
+  .rank-glance{padding:6px}
+  .rank-glance-grid{grid-template-columns:1fr}
+  .rank-glance-item{min-height:27px}
+  #viewActivity .decode-stream{max-height:none!important}
+}
+
+/* Definitive mobile placement: never underneath Leaflet zoom */
+@media(max-width:700px){
+  .map-badge{
+    left:auto!important;
+    right:8px!important;
+    top:10px!important;
+    z-index:650!important;
+    max-width:155px;
+    text-align:right
+  }
+  .leaflet-control-zoom{
+    margin-top:10px!important;
+    margin-left:8px!important
+  }
+}
+
 </style>
 </head>
 <body>
@@ -1116,7 +1319,8 @@ html[data-theme="light"] .moon-icon{display:none}
         <span class="meet-sub">CQ · LLAMÁ · ESCUCHÁ · ENCONTRATE</span>
       </div>
     </div>
-    <div class="dial-scale">
+    <div class="dial-scale" id="dialScale">
+      <div class="dial-hover-readout" id="dialHoverReadout"></div>
       
       <div class="dial-spots" id="dialSpots"></div>
       <div class="dial-labels"><span>7.006</span><span>7.015</span><span>7.024</span><span>7.033</span><span>7.042</span><span>7.051</span><span>7.060</span></div>
@@ -1125,15 +1329,76 @@ html[data-theme="light"] .moon-icon{display:none}
 </section>
 
 <aside class="panel live-decode">
-  <div class="panel-head">
-    <div>
-      <div class="panel-title" id="activityTitle">ACTIVIDAD</div>
-      <div class="panel-sub" id="rightPanelSub">Se mantiene mientras siga activo</div>
-    </div>
-    <div class="panel-sub">10 MIN</div>
+  <div class="side-tabs">
+    <button type="button" class="side-tab active" id="tabActivity">ACTIVIDAD</button>
+    <button type="button" class="side-tab" id="tabStats">ESTADÍSTICAS</button>
+    <button type="button" class="side-tab" id="tabRewards" style="display:none">RECOMPENSAS</button>
   </div>
-  <div class="decode-stream activity-pane" id="decodeStream">
-    <div class="empty">Esperando actividad CW…</div>
+
+  <div class="side-view active" id="viewActivity">
+    <div class="rank-glance" id="rankGlance"></div>
+
+    <div class="panel-head activity-compact-head">
+      <div>
+        <div class="panel-title" id="activityTitle">ACTIVIDAD</div>
+        <div class="panel-sub" id="rightPanelSub">10 spots recientes</div>
+      </div>
+      <div class="panel-sub">10 MIN</div>
+    </div>
+
+    <div class="decode-stream activity-pane" id="decodeStream">
+      <div class="empty">Esperando actividad CW…</div>
+    </div>
+  </div>
+
+  <div class="side-view" id="viewStats">
+    <div class="stats-view-head">
+      <div>
+        <div class="panel-title">🏆 RANKING CW LATAM</div>
+        <div class="panel-sub" id="statsSummary">—</div>
+      </div>
+      <button type="button" class="public-rank-join" id="publicRankJoin">SUMATE</button>
+    </div>
+
+    <div class="stats-block">
+      <div class="leaderboard-title">TOP 3 · COLABORACIÓN</div>
+      <div class="public-rank-list" id="publicRankList">
+        <div class="empty compact">Cargando ranking…</div>
+      </div>
+    </div>
+
+    <div class="stats-block contextual-rank" id="contextualRankBlock" style="display:none">
+      <div class="leaderboard-title">TU POSICIÓN</div>
+      <div class="public-rank-list" id="contextualRankList"></div>
+    </div>
+  </div>
+
+  <div class="side-view" id="viewRewards">
+    <div class="stats-view-head">
+      <div>
+        <div class="panel-title">🏅 RECOMPENSAS</div>
+        <div class="panel-sub">50 reportes por estación</div>
+      </div>
+    </div>
+
+    <div class="rewards-panel-card" id="rewardsPanelCard">
+      <div class="season-head rewards-head">
+        <div>
+          <div class="season-kicker">TEMPORADA ACTUAL</div>
+          <div class="season-title" id="seasonTitle">—</div>
+        </div>
+        <div class="reward-lock on" id="rewardLock">✓</div>
+      </div>
+
+      <div class="season-progress"><i id="seasonProgressBar"></i></div>
+      <div class="season-meta" id="seasonMeta">—</div>
+      <div class="merit-row" id="meritRow"></div>
+
+      <div class="leaderboard seasonal-board" id="seasonalBoard">
+        <div class="leaderboard-title">RANKING DE LA ESTACIÓN</div>
+        <div id="leaderboardList" class="leaderboard-list">—</div>
+      </div>
+    </div>
   </div>
 </aside>
 
@@ -1211,42 +1476,6 @@ html[data-theme="light"] .moon-icon{display:none}
     <div id="profileState" class="profile-summary"></div>
     <div class="focus-progress"><i id="profileProgressBar"></i></div>
 
-    <div class="season-card" id="seasonCard" style="display:none">
-      <div class="season-head">
-        <div>
-          <div class="season-kicker">COLABORACIÓN CW LATAM</div>
-          <div class="season-title">🏆 RANKING DE OPERADORES</div>
-        </div>
-        <div class="season-rank" id="globalRank">#—</div>
-      </div>
-
-      <div class="community-rank-meta" id="globalRankMeta">—</div>
-      <div class="leaderboard global-leaderboard">
-        <div class="leaderboard-title">TOP 3 · REPORTES APORTADOS</div>
-        <div id="globalLeaderboardList" class="leaderboard-list">—</div>
-      </div>
-
-      <div class="reward-divider"></div>
-
-      <div class="season-head rewards-head">
-        <div>
-          <div class="season-kicker">RECOMPENSAS</div>
-          <div class="season-title" id="seasonTitle">ENTRENANDO MI FOCO</div>
-        </div>
-        <div class="reward-lock" id="rewardLock">🔒</div>
-      </div>
-
-      <div class="season-progress"><i id="seasonProgressBar"></i></div>
-      <div class="season-meta" id="seasonMeta">—</div>
-      <div class="merit-row" id="meritRow"></div>
-
-      <div class="leaderboard seasonal-board" id="seasonalBoard" style="display:none">
-        <div class="leaderboard-title">TEMPORADA ACTUAL</div>
-        <div id="leaderboardList" class="leaderboard-list">—</div>
-      </div>
-    </div>
-
-
     <div class="modal-actions" id="guestActions">
       <button id="profileContinue">CONTINUAR</button>
       <button class="secondary" id="profileCancel">CANCELAR</button>
@@ -1264,7 +1493,7 @@ html[data-theme="light"] .moon-icon{display:none}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.25-community8-ranking";
+const CWLATAM_BUILD="2026.08.25-community10-tabs";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const spots=[],active=new Map(),mapObjects=[],mapByCall=new Map();
@@ -1689,12 +1918,14 @@ function renderActivity(){
      return (b[1].totalSpots||0)-(a[1].totalSpots||0);
    });
 
- if(!rows.length){
+ const visibleRows=rows.slice(0,10);
+
+ if(!visibleRows.length){
    el.innerHTML=`<div class="empty">${t("waitingCW")}</div>`;
    return;
  }
 
- el.innerHTML=rows.map(([call,v,age,fm,ai])=>{
+ el.innerHTML=visibleRows.map(([call,v,age,fm,ai])=>{
    const info=prefixInfo(call);
    const opacity=Math.max(0,1-age/ACTIVE_MS);
    const aiBadge=personalMode&&ai
@@ -1757,6 +1988,46 @@ function renderDial(){
     return `<div class="dial-spot ${dialAlert}" onclick="silenceSpotAlert('${call}');openQRZ('${call}')" style="left:${pct}%;top:${top}px;opacity:${opacity};cursor:pointer" title="${call} ${v.actualFreq?.toFixed?.(1) || v.freq.toFixed(1)}">${call}</div>`
  }).join("")
 }
+
+function setupDialHover(){
+ const scale=document.getElementById("dialScale");
+ const readout=document.getElementById("dialHoverReadout");
+ if(!scale||!readout)return;
+
+ const min=7006,max=7060;
+
+ scale.addEventListener("mousemove",e=>{
+   const spot=e.target.closest(".dial-spot");
+
+   if(spot){
+     const call=spot.textContent.trim();
+     const v=active.get(call);
+     if(v){
+       const actual=Number(v.actualFreq||v.freq);
+       readout.style.display="block";
+       readout.style.left=spot.style.left||"50%";
+       readout.textContent=`${call} · ${actual.toFixed(2)} kHz`;
+       return;
+     }
+   }
+
+   const rect=scale.getBoundingClientRect();
+   const x=Math.max(0,Math.min(rect.width,e.clientX-rect.left));
+   const pct=x/rect.width;
+   const freq=min+(max-min)*pct;
+
+   readout.style.display="block";
+   readout.style.left=`${pct*100}%`;
+   readout.textContent=`${freq.toFixed(1)} kHz`;
+ });
+
+ scale.addEventListener("mouseleave",()=>{
+   readout.style.display="none";
+ });
+}
+
+setupDialHover();
+
 function render(){renderActivity();renderDial();renderMapStatus()}
 
 setInterval(()=>{
@@ -1923,6 +2194,7 @@ async function restoreProfile(){
      return;
    }
    currentProfile=data.profile;
+   setSideTab("activity");
    await loadRecentVotes();
    await loadWatchlist();
    await loadSeasonData();
@@ -2022,73 +2294,136 @@ function seasonLabel(name){
 }
 
 async function loadSeasonData(){
- if(!currentProfile||!sessionToken){
-   seasonStatusCache=null;
-   seasonLeaderboardCache=null;
-   collaborationLeaderboardCache=null;
-   renderSeasonUI();
-   return;
- }
-
  try{
-   const jobs=[
-     sb.rpc("cw_get_collaboration_leaderboard",{p_token:sessionToken,p_limit:3})
-   ];
-
-   // Las RPC estacionales se consultan también antes de 100 para poder
-   // mostrar los méritos bloqueados y pasar automáticamente al modo estacional.
-   jobs.push(sb.rpc("cw_get_season_status",{p_token:sessionToken}));
-   jobs.push(sb.rpc("cw_get_season_leaderboard",{p_limit:3}));
-
-   const [globalRes,statusRes,leaderRes]=await Promise.all(jobs);
+   const globalRes=await sb.rpc("cw_get_collaboration_leaderboard",{
+     p_token:sessionToken||"",
+     p_limit:3
+   });
 
    if(!globalRes.error)collaborationLeaderboardCache=globalRes.data;
+   renderPublicRanking();
+
+   if(!currentProfile||!sessionToken){
+     seasonStatusCache=null;
+     seasonLeaderboardCache=null;
+     renderSeasonUI();
+     return;
+   }
+
+   const [statusRes,leaderRes]=await Promise.all([
+     sb.rpc("cw_get_season_status",{p_token:sessionToken}),
+     sb.rpc("cw_get_season_leaderboard",{p_limit:3})
+   ]);
+
    if(!statusRes.error)seasonStatusCache=statusRes.data;
    if(!leaderRes.error)seasonLeaderboardCache=leaderRes.data;
 
    renderSeasonUI();
  }catch(err){
    console.warn("Ranking CW LATAM:",err);
+   renderPublicRanking();
    renderSeasonUI();
  }
 }
 
-function renderSeasonUI(){
- const card=document.getElementById("seasonCard");
- if(!card)return;
 
- if(!currentProfile){
-   card.style.display="none";
-   return;
+let activeSideTab="stats";
+
+function setSideTab(name){
+ const allowed=["activity","stats","rewards"];
+ if(!allowed.includes(name))name="activity";
+
+ if(name==="rewards"&&!currentProfile?.focus_unlocked){
+   name=currentProfile?"activity":"stats";
  }
 
- card.style.display="block";
+ activeSideTab=name;
 
- // ---------------- GLOBAL COLLABORATION RANKING ----------------
- const global=collaborationLeaderboardCache||{};
- const top=Array.isArray(global.top)?global.top:[];
- const me=global.me||{};
- const totalParticipants=Number(global.participants||0);
+ const map={
+   activity:["tabActivity","viewActivity"],
+   stats:["tabStats","viewStats"],
+   rewards:["tabRewards","viewRewards"]
+ };
 
- document.getElementById("globalRank").textContent=me.rank?`#${me.rank}`:"#—";
- document.getElementById("globalRankMeta").textContent=
-   `${Number(currentProfile.votes_count||0)} reportes · ${totalParticipants} operador${totalParticipants===1?"":"es"} participando`;
+ for(const [key,[tabId,viewId]] of Object.entries(map)){
+   document.getElementById(tabId)?.classList.toggle("active",key===name);
+   document.getElementById(viewId)?.classList.toggle("active",key===name);
+ }
+}
 
- document.getElementById("globalLeaderboardList").innerHTML=top.length
-   ? top.map(x=>`<div class="lb-row ${String(x.callsign).toUpperCase()===String(currentProfile.callsign).toUpperCase()?"me":""}">
-       <div class="lb-rank">#${x.rank}</div>
-       <div>
-         <div class="lb-call">${countryFlag(x.country_code)} ${x.callsign}</div>
-         <div class="lb-loc">${x.locator||"—"}</div>
-       </div>
-       <div class="lb-score">${x.reports||0}<span class="lb-report-label"> rpt</span></div>
-     </div>`).join("")
-   : '<div class="empty">Todavía no hay clasificación.</div>';
+function rankRowHTML(x,meCall=""){
+ if(!x||!x.callsign)return "";
+ const isMe=meCall&&String(x.callsign).toUpperCase()===String(meCall).toUpperCase();
+ return `<div class="public-rank-row ${isMe?"me":""}">
+   <div class="public-rank-pos">#${x.rank}</div>
+   <div>
+     <div class="public-rank-call">${countryFlag(x.country_code)} ${x.callsign}</div>
+     <span class="public-rank-loc">${x.locator||"—"}</span>
+   </div>
+   <div class="public-rank-score">${x.reports||0}</div>
+ </div>`;
+}
 
- // ---------------- REWARDS / SEASON ----------------
- const votes=Number(currentProfile.votes_count||0);
- const unlocked=Boolean(currentProfile.focus_unlocked);
- card.classList.toggle("locked",!unlocked);
+function renderPublicRanking(){
+ const list=document.getElementById("publicRankList");
+ const context=document.getElementById("contextualRankList");
+ const contextBlock=document.getElementById("contextualRankBlock");
+ const join=document.getElementById("publicRankJoin");
+ const summary=document.getElementById("statsSummary");
+ const glance=document.getElementById("rankGlance");
+ if(!list||!context||!contextBlock||!join||!summary||!glance)return;
+
+ const data=collaborationLeaderboardCache||{};
+ const top=Array.isArray(data.top)?data.top:[];
+ const me=data.me||{};
+ const ahead=data.ahead||{};
+ const behind=data.behind||{};
+ const participants=Number(data.participants||0);
+ const reports=Number(data.reports||0);
+ const myCall=currentProfile?.callsign||"";
+
+ list.innerHTML=top.length
+   ? top.map(x=>rankRowHTML(x,myCall)).join("")
+   : '<div class="empty compact">Todavía no hay clasificación.</div>';
+
+ summary.textContent=`${participants} operadores · ${reports} reportes`;
+ join.textContent=currentProfile?"MI ESTACIÓN":"SUMATE";
+
+ if(currentProfile&&me.rank){
+   const around=[ahead,me,behind].filter(x=>x&&x.callsign);
+   context.innerHTML=around.map(x=>rankRowHTML(x,myCall)).join("");
+   contextBlock.style.display="block";
+ }else{
+   context.innerHTML="";
+   contextBlock.style.display="none";
+ }
+
+ // Resumen ultracompacto visible siempre en ACTIVIDAD:
+ // Top 3 para visitantes; si hay usuario, su zona de ranking.
+ const quick=(currentProfile&&me.rank)
+   ? [ahead,me,behind].filter(x=>x&&x.callsign)
+   : top.slice(0,3);
+
+ glance.innerHTML=quick.length
+   ? `<div class="rank-glance-grid">${quick.map(x=>`
+       <div class="rank-glance-item ${myCall&&String(x.callsign).toUpperCase()===String(myCall).toUpperCase()?"me":""}">
+         <div class="rank-glance-pos">#${x.rank}</div>
+         <div class="rank-glance-call">${x.callsign}</div>
+         <div class="rank-glance-score">${x.reports||0}</div>
+       </div>`).join("")}</div>`
+   : "";
+}
+
+function renderSeasonUI(){
+ const rewardsTab=document.getElementById("tabRewards");
+ const unlocked=Boolean(currentProfile?.focus_unlocked);
+
+ if(rewardsTab)rewardsTab.style.display=unlocked?"block":"none";
+
+ if(!unlocked){
+   if(activeSideTab==="rewards")setSideTab(currentProfile?"activity":"stats");
+   return;
+ }
 
  const meritOrder=["VERANO","OTOÑO","INVIERNO","PRIMAVERA"];
  const achievements=seasonStatusCache?.achievements||[];
@@ -2110,41 +2445,25 @@ function renderSeasonUI(){
    </div>`;
  }).join("");
 
- const lock=document.getElementById("rewardLock");
- const seasonalBoard=document.getElementById("seasonalBoard");
-
- if(!unlocked){
-   const shown=Math.min(100,votes);
-   document.getElementById("seasonTitle").textContent="🤖 MI FOCO";
-   document.getElementById("seasonProgressBar").style.width=`${shown}%`;
-   document.getElementById("seasonMeta").textContent=
-     `${shown}/100 · faltan ${Math.max(0,100-shown)} reportes para desbloquear MI FOCO y los méritos estacionales`;
-   lock.textContent="🔒";
-   lock.classList.remove("on");
-   seasonalBoard.style.display="none";
-   return;
- }
-
- lock.textContent="✓";
- lock.classList.add("on");
-
  const cur=seasonStatusCache?.current||{};
  const season=cur.season||seasonLeaderboardCache?.season||"—";
  const year=cur.season_year||seasonLeaderboardCache?.season_year||"";
  const count=Math.max(0,Number(cur.count||0));
  const target=50;
  const shown=Math.min(target,count);
+ const votes=Number(currentProfile.votes_count||0);
 
  document.getElementById("seasonTitle").textContent=`${seasonLabel(season)} ${year}`;
  document.getElementById("seasonProgressBar").style.width=`${Math.min(100,(shown/target)*100)}%`;
  document.getElementById("seasonMeta").textContent=count>=target
    ? `${target}/${target} · mérito completado · ${votes} reportes totales`
-   : `${shown}/${target} · faltan ${Math.max(0,target-shown)} para el mérito · ${votes} reportes totales`;
+   : `${shown}/${target} · faltan ${Math.max(0,target-shown)} · ${votes} reportes totales`;
 
  const leaders=seasonLeaderboardCache?.leaders||[];
- seasonalBoard.style.display="block";
  document.getElementById("leaderboardList").innerHTML=leaders.length
-   ? leaders.map(x=>`<div class="lb-row ${String(x.callsign).toUpperCase()===String(currentProfile.callsign).toUpperCase()?"me":""}">
+   ? leaders.map(x=>`<div class="lb-row ${
+       String(x.callsign).toUpperCase()===String(currentProfile.callsign).toUpperCase()?"me":""
+     }">
        <div class="lb-rank">#${x.rank}</div>
        <div>
          <div class="lb-call">${countryFlag(x.country_code)} ${x.callsign}</div>
@@ -2156,6 +2475,12 @@ function renderSeasonUI(){
 }
 
 function updateProfileUI(){
+ if(!currentProfile){
+   setSideTab("stats");
+ }else if(activeSideTab==="stats"){
+   // Keep statistics if user explicitly arrived there; first login goes to activity below.
+ }
+
  const btn=document.getElementById("profileToggle");
  btn.classList.toggle("active",!!currentProfile);
  btn.textContent=currentProfile?`${countryFlag(currentProfile.country_code)} ${currentProfile.callsign}`:"👤";
@@ -2243,6 +2568,7 @@ async function profileAction(mode){
    }
 
    currentProfile=data?.profile||currentProfile;
+   setSideTab("activity");
 
    await loadRecentVotes();
    await loadWatchlist();
@@ -2584,7 +2910,9 @@ function applyLanguage(){
  renderSeasonUI();
  renderActivity();
  if(communityStatsCache)loadCommunityStats();
-}
+
+ renderPublicRanking();
+ renderSeasonUI();}
 
 
 ["profileCall","profileLocator","watchCall"].forEach(id=>{
@@ -2601,6 +2929,10 @@ function applyLanguage(){
 document.getElementById("watchAdd").addEventListener("click",addWatch);
 document.getElementById("watchCall").addEventListener("keydown",e=>{if(e.key==="Enter")addWatch()});
 
+document.getElementById("publicRankJoin").addEventListener("click",openProfileModal);
+document.getElementById("tabActivity").addEventListener("click",()=>setSideTab("activity"));
+document.getElementById("tabStats").addEventListener("click",()=>setSideTab("stats"));
+document.getElementById("tabRewards").addEventListener("click",()=>setSideTab("rewards"));
 document.getElementById("profileToggle").addEventListener("click",openProfileModal);
 document.getElementById("profileClose").addEventListener("click",closeProfileModal);
 document.getElementById("profileCancel").addEventListener("click",closeProfileModal);
@@ -2608,7 +2940,8 @@ document.getElementById("profileCancel2").addEventListener("click",closeProfileM
 document.getElementById("profileContinue").addEventListener("click",()=>profileAction("identify"));
 document.getElementById("profileSave").addEventListener("click",()=>profileAction("update"));
 document.getElementById("profileLogout").addEventListener("click",()=>{
- sessionToken="";currentProfile=null;personalMode=false;personalScores.clear();votedCalls.clear();watchlist.clear();watchAlertedCalls.clear();seasonStatusCache=null;seasonLeaderboardCache=null;
+ sessionToken="";currentProfile=null;personalMode=false;personalScores.clear();votedCalls.clear();watchlist.clear();watchAlertedCalls.clear();
+ setSideTab("stats");seasonStatusCache=null;seasonLeaderboardCache=null;
  localStorage.removeItem("cwlatam_profile_token");
  updateProfileUI();closeProfileModal();renderActivity();
 });
@@ -2625,6 +2958,7 @@ document.getElementById("langToggle").addEventListener("click",()=>{
 });
 
 (async()=>{
+ setSideTab("stats");
  await recordVisit();
  await restoreProfile();
  subscribeChat();
@@ -2632,6 +2966,7 @@ document.getElementById("langToggle").addEventListener("click",()=>{
  loadCommunityStats();
  loadCountryStats();
  loadModelStats();
+ loadSeasonData();
  applyLanguage();
  setInterval(()=>{void sb.rpc("cw_add_usage",{p_visitor_id:visitorId,p_seconds:60}).then(()=>{},()=>{});},60000);
  setInterval(loadCommunityStats,60000);
