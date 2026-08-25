@@ -6,27 +6,31 @@ const PORT = Number(process.env.PORT || 3000);
 
 const RBN_HOST = "telnet.reversebeacon.net";
 const RBN_PORT = 7000;
-
 const RBN_LOGIN = String(
   process.env.RBN_LOGIN || "ZP5DXS"
 ).trim();
 
-const clients = new Set();
-
 const HISTORY_MS = 10 * 60 * 1000;
+
+// Si durante 90 segundos no llega absolutamente
+// ningún dato desde RBN, forzamos reconexión.
+const RBN_WATCHDOG_MS = 90 * 1000;
+
+// Heartbeat navegador/Render.
+const WS_HEARTBEAT_MS = 20 * 1000;
+
+const clients = new Set();
 const history = [];
 
 let rbn = null;
 let buffer = "";
 let reconnectTimer = null;
+let lastRbnDataAt = 0;
+let rbnConnected = false;
 
 
 /*
- * Prefijos considerados Sudamérica.
- *
- * El filtro se aplica al SPOTTER.
- * La estación escuchada puede ser
- * de cualquier parte del mundo.
+ * SPOTTERS SUDAMERICANOS
  */
 const SA_PREFIXES = [
   "LU", "LW", "AY", "AZ",
@@ -83,23 +87,28 @@ function isSouthAmericaSpotter(call) {
 
 
 /*
- * Enviar un objeto JSON a todos
- * los navegadores conectados.
+ * ENVÍO INMEDIATO AL NAVEGADOR
  */
 function broadcast(obj) {
   const data = JSON.stringify(obj);
 
   for (const ws of clients) {
-    if (ws.readyState === 1) {
-      ws.send(data);
+    if (ws.readyState === ws.OPEN) {
+      try {
+        ws.send(data);
+      } catch (error) {
+        console.error(
+          "WebSocket send:",
+          error.message
+        );
+      }
     }
   }
 }
 
 
 /*
- * El historial solamente conserva
- * los últimos 10 minutos.
+ * HISTORIAL 10 MINUTOS
  */
 function pruneHistory() {
   const cutoff =
@@ -116,17 +125,15 @@ function pruneHistory() {
 
 function rememberSpot(spot) {
   history.push(spot);
-
   pruneHistory();
 }
 
 
 /*
- * Parser basado en el formato REAL
- * observado en Reverse Beacon Network:
+ * PARSER DEL FORMATO REAL RBN
  *
- * DX de WC2L-#:  7031.50  N9FGC
- * CW  5 dB  18 WPM  CQ  2319Z
+ * DX de WC2L-#: 7031.50 N9FGC
+ * CW 5 dB 18 WPM CQ 2319Z
  */
 function parseRbnLine(raw) {
   const line = String(raw || "")
@@ -140,7 +147,6 @@ function parseRbnLine(raw) {
   if (!match) {
     return null;
   }
-
 
   const spotter =
     cleanCall(match[1]);
@@ -170,30 +176,17 @@ function parseRbnLine(raw) {
 
 
   /*
-   * FILTROS CW LATAM
+   * FILTROS
    */
 
-
-  /*
-   * CW únicamente.
-   */
   if (mode !== "CW") {
     return null;
   }
 
-
-  /*
-   * Solamente estaciones detectadas
-   * llamando CQ.
-   */
   if (activity !== "CQ") {
     return null;
   }
 
-
-  /*
-   * Banda completa de 40 metros.
-   */
   if (
     actualFreq < 7000 ||
     actualFreq > 7300
@@ -201,11 +194,6 @@ function parseRbnLine(raw) {
     return null;
   }
 
-
-  /*
-   * El receptor / spotter debe estar
-   * en Sudamérica.
-   */
   if (
     !isSouthAmericaSpotter(spotter)
   ) {
@@ -214,23 +202,13 @@ function parseRbnLine(raw) {
 
 
   /*
-   * CANAL DE ENCUENTRO
+   * CANAL LXCW QRS
    *
-   * ±100 Hz alrededor de 7033 kHz.
-   *
-   * 7032.9 a 7033.1
-   *
-   * Si entra ahí, visualmente lo
-   * normalizamos a 7033.0.
-   *
-   * Conservamos además actualFreq
-   * para saber exactamente dónde
-   * lo reportó RBN.
+   * 7032.9 - 7033.1
    */
   const isChannel =
     actualFreq >= 7032.9 &&
     actualFreq <= 7033.1;
-
 
   const freq =
     isChannel
@@ -241,59 +219,42 @@ function parseRbnLine(raw) {
   return {
     source: "RBN",
 
-    /*
-     * El timestamp local del servidor
-     * permite manejar correctamente
-     * los 10 minutos de vida.
-     */
     ts: Date.now(),
 
-    spotter: spotter,
+    spotter,
 
-    dx: dx,
+    dx,
 
-    /*
-     * Frecuencia usada por la interfaz.
-     */
-    freq: freq,
+    freq,
 
-    /*
-     * Frecuencia original recibida.
-     */
-    actualFreq: actualFreq,
+    actualFreq,
 
-    /*
-     * Indica si pertenece al
-     * canal prioritario 7033.
-     */
-    isChannel: isChannel,
+    isChannel,
 
-    snr: snr,
+    snr,
 
-    wpm: wpm,
+    wpm,
 
     type: "CQ",
 
     mode: "CW",
 
-    rbnUtc: rbnUtc
+    rbnUtc
   };
 }
 
 
 /*
- * Conexión persistente con
- * Reverse Beacon Network.
+ * CONEXIÓN RBN
  */
 function connectRbn() {
-  clearTimeout(
-    reconnectTimer
-  );
+  clearTimeout(reconnectTimer);
 
   buffer = "";
+  rbnConnected = false;
 
   console.log(
-    `Connecting RBN ${RBN_HOST}:${RBN_PORT} as ${RBN_LOGIN}...`
+    `Conectando ${RBN_HOST}:${RBN_PORT} como ${RBN_LOGIN}...`
   );
 
 
@@ -303,191 +264,191 @@ function connectRbn() {
   });
 
 
+  /*
+   * Menor latencia posible.
+   */
+  rbn.setNoDelay(true);
+
   rbn.setKeepAlive(
     true,
-    30000
+    20000
   );
 
 
-  rbn.on(
-    "connect",
-    () => {
+  rbn.on("connect", () => {
+    rbnConnected = true;
+    lastRbnDataAt = Date.now();
 
-      console.log(
-        "RBN TCP connected"
-      );
-
-
-      /*
-       * El servidor Telnet pide
-       * un indicativo como login.
-       */
-      setTimeout(
-        () => {
-
-          if (
-            rbn &&
-            !rbn.destroyed
-          ) {
-            rbn.write(
-              RBN_LOGIN + "\r\n"
-            );
-          }
-
-        },
-        700
-      );
-
-    }
-  );
-
-
-  /*
-   * Flujo continuo del RBN.
-   */
-  rbn.on(
-    "data",
-    chunk => {
-
-      buffer +=
-        chunk.toString("utf8");
-
-
-      /*
-       * Un chunk puede contener
-       * varias líneas.
-       */
-      const lines =
-        buffer.split(/\n/);
-
-
-      /*
-       * Si la última línea quedó
-       * incompleta, la conservamos
-       * hasta el próximo chunk.
-       */
-      buffer =
-        lines.pop() || "";
-
-
-      for (const line of lines) {
-
-        const spot =
-          parseRbnLine(line);
-
-
-        if (!spot) {
-          continue;
-        }
-
-
-        /*
-         * Guardamos el spot antes
-         * de transmitirlo.
-         *
-         * Así un navegador que entre
-         * después recibe el historial
-         * reciente.
-         */
-        rememberSpot(spot);
-
-
-        const channelMark =
-          spot.isChannel
-            ? " *** 7033 CHANNEL ***"
-            : "";
-
-
-        console.log(
-          `MATCH ` +
-          `${spot.spotter} -> ` +
-          `${spot.dx} ` +
-          `${spot.actualFreq.toFixed(2)} kHz ` +
-          `${spot.snr} dB ` +
-          `${spot.wpm} WPM` +
-          channelMark
-        );
-
-
-        /*
-         * Envío LIVE a los navegadores.
-         */
-        broadcast(spot);
-      }
-
-    }
-  );
-
-
-  /*
-   * Reconexión automática.
-   */
-  const reconnect = () => {
-
-    if (rbn) {
-
-      try {
-        rbn.destroy();
-      } catch (error) {
-        // Ignore
-      }
-
-
-      rbn = null;
-    }
-
-
-    clearTimeout(
-      reconnectTimer
+    console.log(
+      "RBN TCP conectado"
     );
 
 
-    reconnectTimer =
-      setTimeout(
-        connectRbn,
-        5000
+    /*
+     * Login Telnet.
+     */
+    setTimeout(() => {
+      if (
+        rbn &&
+        !rbn.destroyed
+      ) {
+        rbn.write(
+          RBN_LOGIN + "\r\n"
+        );
+      }
+    }, 700);
+  });
+
+
+  /*
+   * FLUJO RBN
+   */
+  rbn.on("data", chunk => {
+    /*
+     * Cada chunk recibido confirma que
+     * la conexión Telnet está viva.
+     */
+    lastRbnDataAt = Date.now();
+
+    buffer +=
+      chunk.toString("utf8");
+
+
+    const lines =
+      buffer.split(/\n/);
+
+
+    /*
+     * Conservar posible línea incompleta.
+     */
+    buffer =
+      lines.pop() || "";
+
+
+    for (const line of lines) {
+      const spot =
+        parseRbnLine(line);
+
+
+      if (!spot) {
+        continue;
+      }
+
+
+      /*
+       * 1. Guardamos historial.
+       */
+      rememberSpot(spot);
+
+
+      /*
+       * 2. Enviamos INMEDIATAMENTE.
+       */
+      broadcast(spot);
+
+
+      const mark =
+        spot.isChannel
+          ? " *** 7033 ***"
+          : "";
+
+
+      console.log(
+        `LIVE ${spot.spotter} -> ` +
+        `${spot.dx} ` +
+        `${spot.actualFreq.toFixed(2)} ` +
+        `${spot.snr} dB ` +
+        `${spot.wpm} WPM` +
+        mark
       );
-  };
-
-
-  rbn.on(
-    "error",
-    error => {
-
-      console.error(
-        "RBN:",
-        error.message
-      );
-
     }
-  );
+  });
 
 
-  rbn.on(
-    "close",
-    reconnect
-  );
+  rbn.on("error", error => {
+    console.error(
+      "RBN error:",
+      error.message
+    );
+  });
+
+
+  rbn.on("close", () => {
+    console.log(
+      "RBN desconectado"
+    );
+
+    rbnConnected = false;
+
+    scheduleRbnReconnect();
+  });
 }
 
 
 /*
- * Servidor HTTP requerido
- * por Render.
+ * Evita programar muchas
+ * reconexiones simultáneas.
+ */
+function scheduleRbnReconnect() {
+  clearTimeout(
+    reconnectTimer
+  );
+
+  reconnectTimer =
+    setTimeout(() => {
+      connectRbn();
+    }, 3000);
+}
+
+
+/*
+ * WATCHDOG TELNET
+ *
+ * Aunque TCP crea que sigue conectado,
+ * si deja de llegar TODO el flujo durante
+ * 90 segundos, destruimos la sesión.
+ */
+setInterval(() => {
+  if (
+    !rbn ||
+    rbn.destroyed ||
+    !rbnConnected
+  ) {
+    return;
+  }
+
+  const silentFor =
+    Date.now() - lastRbnDataAt;
+
+
+  if (
+    silentFor >
+    RBN_WATCHDOG_MS
+  ) {
+    console.warn(
+      "RBN sin datos por más de 90 s. Reconectando..."
+    );
+
+    try {
+      rbn.destroy();
+    } catch (error) {
+      // Ignorar.
+    }
+  }
+}, 15000);
+
+
+/*
+ * HTTP
  */
 const server =
   http.createServer(
     (req, res) => {
 
-
-      /*
-       * Endpoint de diagnóstico.
-       */
       if (
         req.url === "/health"
       ) {
-
         pruneHistory();
-
 
         res.writeHead(
           200,
@@ -496,7 +457,10 @@ const server =
               "application/json",
 
             "access-control-allow-origin":
-              "*"
+              "*",
+
+            "cache-control":
+              "no-store"
           }
         );
 
@@ -505,11 +469,8 @@ const server =
           JSON.stringify({
             ok: true,
 
-            source:
-              "Reverse Beacon Network",
-
-            telnet:
-              `${RBN_HOST}:${RBN_PORT}`,
+            live:
+              rbnConnected,
 
             websocketClients:
               clients.size,
@@ -520,14 +481,23 @@ const server =
             historyMinutes:
               10,
 
+            secondsSinceRbnData:
+              lastRbnDataAt
+                ? Math.round(
+                    (
+                      Date.now() -
+                      lastRbnDataAt
+                    ) / 1000
+                  )
+                : null,
+
             filter:
-              "CW / CQ / 40m / South America spotters",
+              "CW / CQ / 40m / South America",
 
             channel:
-              "7032.9-7033.1 normalized to 7033.0"
+              "7032.9-7033.1"
           })
         );
-
 
         return;
       }
@@ -537,26 +507,31 @@ const server =
         200,
         {
           "content-type":
-            "text/plain; charset=utf-8"
+            "text/plain; charset=utf-8",
+
+          "cache-control":
+            "no-store"
         }
       );
 
 
       res.end(
-        "CW LATAM relay\n"
+        "CW LATAM relay LIVE\n"
       );
-
     }
   );
 
 
 /*
- * WebSocket utilizado por
- * index.html.
+ * WEBSOCKET
+ *
+ * Desactivamos compresión porque los mensajes
+ * son diminutos y queremos mínima latencia.
  */
 const wss =
   new WebSocketServer({
-    server
+    server,
+    perMessageDeflate: false
   });
 
 
@@ -564,25 +539,42 @@ wss.on(
   "connection",
   ws => {
 
+    /*
+     * Control heartbeat.
+     */
+    ws.isAlive = true;
+
+
+    ws.on(
+      "pong",
+      () => {
+        ws.isAlive = true;
+      }
+    );
+
+
     clients.add(ws);
 
 
+    console.log(
+      `Navegador conectado. Total: ${clients.size}`
+    );
+
+
     /*
-     * Primero indicamos que
-     * la conexión está activa.
+     * Estado.
      */
     ws.send(
       JSON.stringify({
         type: "status",
-        rbn: "connected"
+        live: rbnConnected
       })
     );
 
 
     /*
-     * Después enviamos inmediatamente
-     * todos los spots válidos de
-     * los últimos 10 minutos.
+     * Recuperación instantánea
+     * de los últimos 10 minutos.
      */
     pruneHistory();
 
@@ -598,30 +590,91 @@ wss.on(
     ws.on(
       "close",
       () => {
-
         clients.delete(ws);
 
+        console.log(
+          `Navegador desconectado. Total: ${clients.size}`
+        );
       }
     );
 
+
+    ws.on(
+      "error",
+      () => {
+        clients.delete(ws);
+      }
+    );
   }
 );
 
 
 /*
- * Render define PORT
- * automáticamente.
+ * HEARTBEAT WEBSOCKET
+ *
+ * Esto es importante con Render.
+ *
+ * Cada 20 segundos:
+ * navegador responde pong automáticamente.
+ *
+ * Si no responde:
+ * cerramos la conexión y el HTML
+ * podrá reconectarse.
+ */
+const heartbeat =
+  setInterval(() => {
+
+    for (const ws of clients) {
+      if (
+        ws.isAlive === false
+      ) {
+        console.warn(
+          "WebSocket congelado. Terminando conexión."
+        );
+
+        clients.delete(ws);
+
+        ws.terminate();
+
+        continue;
+      }
+
+
+      ws.isAlive = false;
+
+
+      try {
+        ws.ping();
+      } catch (error) {
+        clients.delete(ws);
+        ws.terminate();
+      }
+    }
+
+  }, WS_HEARTBEAT_MS);
+
+
+wss.on(
+  "close",
+  () => {
+    clearInterval(
+      heartbeat
+    );
+  }
+);
+
+
+/*
+ * ARRANQUE
  */
 server.listen(
   PORT,
   () => {
 
     console.log(
-      `CW LATAM relay listening on port ${PORT}`
+      `CW LATAM relay activo en puerto ${PORT}`
     );
 
-
     connectRbn();
-
   }
 );
