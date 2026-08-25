@@ -397,6 +397,15 @@ html[data-theme="light"] .moon-icon{display:none}
 }
 .dial-spot.watch{color:#ff5757!important;font-weight:900}
 
+
+.vote-row.logged-out{opacity:.32;filter:saturate(.55)}
+.vote-row.logged-out .vote-btn{
+  cursor:not-allowed;
+  transform:none!important;
+  box-shadow:none!important;
+}
+.vote-row.logged-out .vote-btn:hover{transform:none}
+
 </style>
 </head>
 <body>
@@ -526,7 +535,7 @@ html[data-theme="light"] .moon-icon{display:none}
   <div class="modal-card">
     <button class="modal-close" id="profileClose">×</button>
     <h2 id="profileTitle">MI ESTACIÓN</h2>
-    <p id="profileIntro">CALLSIGN y locator son obligatorios para votar, chatear y entrenar MI FOCO. Podés cambiarlos cuando quieras.</p>
+    <p id="profileIntro">Indicativo + locator identifican tu estación. Si ya existe, recuperamos tu perfil; si no, lo creamos automáticamente. Podés editarlos cuando quieras.</p>
 
     <div class="form-grid">
       <div class="field">
@@ -537,29 +546,11 @@ html[data-theme="light"] .moon-icon{display:none}
         <label>LOCATOR</label>
         <input id="profileLocator" autocomplete="off" maxlength="8" placeholder="GG14XX">
       </div>
-      <div class="field full" id="pinField">
-        <label>PIN PERSONAL</label>
-        <input id="profilePin" type="password" inputmode="numeric" maxlength="20" placeholder="4 a 20 caracteres">
-      </div>
-    </div>
-
-
-    <div class="email-box">
-      <h3>EMAIL · RECUPERACIÓN Y MI FOCO</h3>
-      <div class="verify-state" id="emailState">Opcional para usar la web. Obligatorio para MI FOCO y Mis Alertas.</div>
-      <div class="email-row">
-        <input id="profileEmail" type="email" autocomplete="email" placeholder="tu@email.com">
-        <button id="emailSendCode">ENVIAR CÓDIGO</button>
-      </div>
-      <div class="email-row">
-        <input id="emailOtp" inputmode="numeric" maxlength="8" placeholder="Código recibido">
-        <button id="emailVerifyCode">VERIFICAR / RECUPERAR</button>
-      </div>
     </div>
 
     <div class="watch-box" id="watchBox">
       <h3>MIS ALERTAS</h3>
-      <div class="verify-state" id="watchState">Verificá tu email para activar alertas personales.</div>
+      <div class="verify-state" id="watchState">Ingresá tu indicativo y locator para guardar alertas personales.</div>
       <div class="watch-row">
         <input id="watchCall" maxlength="16" placeholder="Ej. VP8DX">
         <button id="watchAdd">AGREGAR</button>
@@ -571,14 +562,13 @@ html[data-theme="light"] .moon-icon{display:none}
     <div class="focus-progress"><i id="profileProgressBar"></i></div>
 
     <div class="modal-actions" id="guestActions">
-      <button id="profileLogin">ENTRAR</button>
-      <button id="profileCreate">CREAR PERFIL</button>
+      <button id="profileContinue">CONTINUAR</button>
       <button class="secondary" id="profileCancel">CANCELAR</button>
     </div>
 
     <div class="modal-actions" id="memberActions" style="display:none">
       <button id="profileSave">GUARDAR CAMBIOS</button>
-      <button class="secondary" id="profileLogout">CERRAR SESIÓN</button>
+      <button class="secondary" id="profileLogout">CAMBIAR OPERADOR</button>
       <button class="secondary" id="profileCancel2">CERRAR</button>
     </div>
   </div>
@@ -588,7 +578,7 @@ html[data-theme="light"] .moon-icon{display:none}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.25-community2";
+const CWLATAM_BUILD="2026.08.25-community4-simple";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const spots=[],active=new Map(),mapObjects=[],mapByCall=new Map();
@@ -1029,10 +1019,10 @@ function renderActivity(){
    const voted=votedCalls.has(call)?Number(votedCalls.get(call)):null;
    const alertClass=v.isChannel?"channel-alert":(watched?"watch-alert":"");
    const voteHtml=voted===null
-     ? `<div class="vote-row">
-          <button class="vote-btn green" onclick="event.stopPropagation();voteCall('${call}',2)"><span class="sig"></span>${t("hear")}</button>
-          <button class="vote-btn yellow" onclick="event.stopPropagation();voteCall('${call}',1)"><span class="sig"></span>${t("weak")}</button>
-          <button class="vote-btn red" onclick="event.stopPropagation();voteCall('${call}',0)"><span class="sig"></span>${t("noHear")}</button>
+     ? `<div class="vote-row ${currentProfile?"":"logged-out"}">
+          <button class="vote-btn green" onclick="event.stopPropagation();handleVoteClick('${call}',2)"><span class="sig"></span>${t("hear")}</button>
+          <button class="vote-btn yellow" onclick="event.stopPropagation();handleVoteClick('${call}',1)"><span class="sig"></span>${t("weak")}</button>
+          <button class="vote-btn red" onclick="event.stopPropagation();handleVoteClick('${call}',0)"><span class="sig"></span>${t("noHear")}</button>
         </div>`
      : `<div class="vote-done r${voted}">✓ ${t("reported")}</div>`;
    return `<div class="decode-item ${alertClass}" onclick="${v.isChannel||watched?`silenceSpotAlert('${call}')`:""}" style="opacity:${opacity}">
@@ -1123,7 +1113,7 @@ let communityStatsCache=null;
 const votedCalls=new Map();
 const watchlist=new Set();
 const watchAlertedCalls=new Set();
-let pendingOtpEmail="";
+
 
 if(!visitorId){
   visitorId=(crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`);
@@ -1135,11 +1125,11 @@ const I18N={
    activity:"ACTIVIDAD",chat:"CHAT",activeSub:"Se mantiene mientras siga activo",
    waitingCW:"Esperando actividad CW…",hear:"ESCUCHO",weak:"DÉBIL",noHear:"NO ESCUCHO",
    receiver:"receptor",receivers:"receptores",inRadius:"en el radio",
-   profile:"MI ESTACIÓN",profileIntro:"CALLSIGN y locator son obligatorios para votar, chatear y entrenar MI FOCO. Podés cambiarlos cuando quieras.",
+   profile:"MI ESTACIÓN",profileIntro:"Indicativo + locator identifican tu estación. Si ya existe, recuperamos tu perfil; si no, lo creamos automáticamente. Podés editarlos cuando quieras.",
    login:"ENTRAR",create:"CREAR PERFIL",save:"GUARDAR CAMBIOS",logout:"CERRAR SESIÓN",
    send:"ENVIAR",msg:"Mensaje breve…",region:"REGIÓN",focus:"FOCO 1500 KM",myFocus:"MI FOCO IA",
    locked:"MI FOCO se activa al llegar a 100 reportes.",needProfile:"Completá CALLSIGN + LOCATOR para participar.",
-   voteSaved:"Reporte guardado",reported:"REPORTADO",emailNeeded:"Verificá tu email para activar MI FOCO.",chatNeed:"Necesitás tu perfil para chatear.",
+   voteSaved:"Reporte guardado",reported:"REPORTADO",chatNeed:"Necesitás tu perfil para chatear.",
    radar:"RADAR CW",freq:"FRECUENCIA LXCW QRS",listen:"LLAMÁ / ESCUCHÁ EN 7.033 MHz"
  },
  pt:{
@@ -1150,7 +1140,7 @@ const I18N={
    login:"ENTRAR",create:"CRIAR PERFIL",save:"SALVAR ALTERAÇÕES",logout:"SAIR",
    send:"ENVIAR",msg:"Mensagem curta…",region:"REGIÃO",focus:"FOCO 1500 KM",myFocus:"MEU FOCO IA",
    locked:"MEU FOCO é liberado ao chegar a 100 relatórios.",needProfile:"Preencha CALLSIGN + LOCATOR para participar.",
-   voteSaved:"Relatório salvo",reported:"REPORTADO",emailNeeded:"Verifique seu email para ativar MEU FOCO.",chatNeed:"Você precisa do seu perfil para conversar.",
+   voteSaved:"Relatório salvo",reported:"REPORTADO",chatNeed:"Você precisa do seu perfil para conversar.",
    radar:"RADAR CW",freq:"FREQUÊNCIA LXCW QRS",listen:"CHAME / ESCUTE EM 7.033 MHz"
  }
 };
@@ -1242,7 +1232,6 @@ async function restoreProfile(){
      return;
    }
    currentProfile=data.profile;
-   await loadAccountState();
    await loadRecentVotes();
    await loadWatchlist();
    updateProfileUI();
@@ -1250,18 +1239,6 @@ async function restoreProfile(){
 }
 
 
-async function loadAccountState(){
- if(!sessionToken||!currentProfile)return;
- try{
-   const {data,error}=await sb.rpc("cw_account_state",{p_token:sessionToken});
-   if(error||!data?.ok)return;
-   currentProfile.email=data.email||"";
-   currentProfile.email_verified=Boolean(data.email_verified);
-   currentProfile.votes_count=Number(data.votes_count||currentProfile.votes_count||0);
-   currentProfile.focus_unlocked=Boolean(data.focus_unlocked);
-   if(currentProfile.email)document.getElementById("profileEmail").value=currentProfile.email;
- }catch{}
-}
 
 async function loadRecentVotes(){
  votedCalls.clear();
@@ -1295,14 +1272,14 @@ function renderWatchlist(){
  const state=document.getElementById("watchState");
  const input=document.getElementById("watchCall");
  const add=document.getElementById("watchAdd");
- const verified=Boolean(currentProfile?.email_verified);
+ const ready=Boolean(currentProfile&&sessionToken);
 
- state.textContent=verified
+ state.textContent=ready
    ? "Los indicativos de esta lista generan una alerta CW cuando aparecen activos."
-   : "Verificá tu email para activar alertas personales.";
- state.classList.toggle("ok",verified);
- input.disabled=!verified;
- add.disabled=!verified;
+   : "Ingresá tu indicativo y locator para guardar alertas personales.";
+ state.classList.toggle("ok",ready);
+ input.disabled=!ready;
+ add.disabled=!ready;
 
  tags.innerHTML=[...watchlist].sort().map(call=>
    `<span class="watch-tag">${call}<button onclick="removeWatch('${call}')" title="Eliminar">×</button></span>`
@@ -1317,7 +1294,7 @@ function refreshWatchVisuals(){
 }
 
 async function addWatch(){
- if(!currentProfile?.email_verified){openProfileModal();showToast("Verificá tu email primero");return}
+ if(!currentProfile||!sessionToken){openProfileModal();showToast(t("needProfile"));return}
  const input=document.getElementById("watchCall");
  const call=input.value.trim().toUpperCase();
  if(!call)return;
@@ -1338,58 +1315,15 @@ async function removeWatch(call){
 }
 window.removeWatch=removeWatch;
 
-async function sendEmailOtp(){
- const email=document.getElementById("profileEmail").value.trim().toLowerCase();
- if(!email){showToast("Ingresá tu email");return}
- const {error}=await sb.auth.signInWithOtp({
-   email,
-   options:{shouldCreateUser:true}
- });
- if(error){showToast("No se pudo enviar el código");return}
- pendingOtpEmail=email;
- showToast("Código enviado por email");
-}
-
-async function verifyEmailOtp(){
- const email=(pendingOtpEmail||document.getElementById("profileEmail").value).trim().toLowerCase();
- const token=document.getElementById("emailOtp").value.trim();
- if(!email||!token){showToast("Ingresá email y código");return}
-
- const {error}=await sb.auth.verifyOtp({email,token,type:"email"});
- if(error){showToast("Código inválido o vencido");return}
-
- try{
-   if(currentProfile&&sessionToken){
-     const {data,error:linkError}=await sb.rpc("cw_link_auth_email",{p_token:sessionToken});
-     if(linkError)throw linkError;
-     currentProfile.email=data.email;
-     currentProfile.email_verified=true;
-     showToast("Email verificado");
-   }else{
-     const {data,error:recoverError}=await sb.rpc("cw_recover_profile_from_auth");
-     if(recoverError)throw recoverError;
-     sessionToken=data.session_token;
-     localStorage.setItem("cwlatam_profile_token",sessionToken);
-     currentProfile=data.profile;
-     showToast("Perfil recuperado");
-   }
-
-   document.getElementById("emailOtp").value="";
-   await loadAccountState();
-   await loadRecentVotes();
-   await loadWatchlist();
-   updateProfileUI();
- }catch(err){
-   showToast("Email verificado, pero no está vinculado a un perfil");
- }
-}
 
 function updateProfileUI(){
  const btn=document.getElementById("profileToggle");
  btn.classList.toggle("active",!!currentProfile);
  btn.textContent=currentProfile?`${countryFlag(currentProfile.country_code)} ${currentProfile.callsign}`:"👤";
  document.getElementById("profileTitle").textContent=t("profile");
- document.getElementById("profileIntro").textContent=t("profileIntro");
+ document.getElementById("profileIntro").textContent=currentLang==="pt"
+   ?"Indicativo + locator identificam sua estação. Se já existir, recuperamos o perfil; caso contrário, criamos automaticamente. Você pode editá-los quando quiser."
+   :"Indicativo + locator identifican tu estación. Si ya existe, recuperamos tu perfil; si no, lo creamos automáticamente. Podés editarlos cuando quieras.";
 
  const votes=currentProfile?.votes_count||0;
  const pct=Math.min(100,votes);
@@ -1400,18 +1334,7 @@ function updateProfileUI(){
 
  document.getElementById("guestActions").style.display=currentProfile?"none":"flex";
  document.getElementById("memberActions").style.display=currentProfile?"flex":"none";
- document.getElementById("pinField").style.display=currentProfile?"none":"block";
 
- const emailState=document.getElementById("emailState");
- if(currentProfile?.email_verified){
-   emailState.textContent=`✓ Email verificado · ${currentProfile.email||""}`;
-   emailState.classList.add("ok");
- }else{
-   emailState.textContent=currentProfile
-     ?"Verificá un email para habilitar MI FOCO, Mis Alertas y recuperación."
-     :"Podés recuperar un perfil ya vinculado ingresando tu email y el código recibido.";
-   emailState.classList.remove("ok");
- }
  renderWatchlist();
 
  if(currentProfile){
@@ -1428,52 +1351,91 @@ function openProfileModal(){
 function closeProfileModal(){document.getElementById("profileModal").classList.remove("show")}
 
 async function profileAction(mode){
- const call=document.getElementById("profileCall").value.trim().toUpperCase();
- const locator=document.getElementById("profileLocator").value.trim().toUpperCase();
- const pin=document.getElementById("profilePin").value;
+ const call=document.getElementById("profileCall").value.trim().toUpperCase().replace(/\s+/g,"");
+ const locator=document.getElementById("profileLocator").value.trim().toUpperCase().replace(/\s+/g,"");
+
+ // Reflejar inmediatamente la normalización en pantalla.
+ document.getElementById("profileCall").value=call;
+ document.getElementById("profileLocator").value=locator;
+
  let pos;
- try{pos=maidenheadToLatLon(locator)}catch{showToast("Locator inválido");return}
+ try{pos=maidenheadToLatLon(locator)}
+ catch{showToast("Locator inválido");return}
+
+ if(call.length<3){
+   showToast("Indicativo inválido");
+   return;
+ }
 
  try{
    let result;
-   if(mode==="create"){
-     result=await sb.rpc("cw_create_profile",{
-       p_callsign:call,p_locator:locator,p_pin:pin,p_lat:pos.lat,p_lon:pos.lon,
-       p_visitor_id:visitorId,p_country_code:countryInfo.code||null,p_country_name:countryInfo.name||null
-     });
-   }else if(mode==="login"){
-     result=await sb.rpc("cw_login_profile",{
-       p_callsign:call,p_locator:locator,p_pin:pin,p_lat:pos.lat,p_lon:pos.lon,
-       p_visitor_id:visitorId,p_country_code:countryInfo.code||null,p_country_name:countryInfo.name||null
+
+   if(mode==="update" && currentProfile && sessionToken){
+     result=await sb.rpc("cw_update_profile",{
+       p_token:sessionToken,
+       p_callsign:call,
+       p_locator:locator,
+       p_lat:pos.lat,
+       p_lon:pos.lon,
+       p_country_code:countryInfo.code||null,
+       p_country_name:countryInfo.name||null
      });
    }else{
-     result=await sb.rpc("cw_update_profile",{
-       p_token:sessionToken,p_callsign:call,p_locator:locator,p_lat:pos.lat,p_lon:pos.lon,
-       p_country_code:countryInfo.code||null,p_country_name:countryInfo.name||null
+     result=await sb.rpc("cw_identify_profile",{
+       p_callsign:call,
+       p_locator:locator,
+       p_lat:pos.lat,
+       p_lon:pos.lon,
+       p_visitor_id:visitorId,
+       p_country_code:countryInfo.code||null,
+       p_country_name:countryInfo.name||null
      });
    }
 
    if(result.error)throw result.error;
+
    const data=result.data;
+
    if(data?.session_token){
      sessionToken=data.session_token;
      localStorage.setItem("cwlatam_profile_token",sessionToken);
    }
+
    currentProfile=data?.profile||currentProfile;
-   await loadAccountState();
+
    await loadRecentVotes();
    await loadWatchlist();
+
    updateProfileUI();
    closeProfileModal();
-   showToast("OK");
+
+   if(mode==="update"){
+     showToast("Perfil actualizado");
+   }else{
+     showToast(data?.created ? "Estación creada" : "Perfil recuperado");
+   }
+
    if(currentProfile?.focus_unlocked)refreshPersonalFocus();
+
  }catch(err){
    const m=String(err?.message||err);
-   if(m.includes("CALLSIGN_EXISTS"))showToast("Ese indicativo ya tiene perfil");
-   else if(m.includes("LOGIN_INVALID"))showToast("CALL o PIN incorrectos");
-   else showToast("No se pudo guardar el perfil");
+   if(m.includes("PROFILE_EXISTS"))showToast("Ese CALL + locator ya pertenece a otro perfil");
+   else if(m.includes("LOCATOR_INVALID"))showToast("Locator inválido");
+   else if(m.includes("CALLSIGN_INVALID"))showToast("Indicativo inválido");
+   else showToast("No se pudo identificar la estación");
  }
 }
+
+
+function handleVoteClick(call,rating){
+ if(!currentProfile||!sessionToken){
+   openProfileModal();
+   showToast(t("needProfile"));
+   return;
+ }
+ voteCall(call,rating);
+}
+window.handleVoteClick=handleVoteClick;
 
 async function voteCall(call,rating){
  if(!currentProfile||!sessionToken){openProfileModal();showToast(t("needProfile"));return}
@@ -1531,11 +1493,6 @@ function activatePersonalFocus(){
  if(!currentProfile.focus_unlocked){
    const missing=Math.max(0,100-(currentProfile.votes_count||0));
    showToast(currentLang==="pt"?`Faltam ${missing} votos para ativar MEU FOCO.`:`Te faltan ${missing} votos para activar MI FOCO.`);
-   return;
- }
- if(!currentProfile.email_verified){
-   openProfileModal();
-   showToast(t("emailNeeded"));
    return;
  }
  personalMode=true;
@@ -1629,17 +1586,14 @@ function applyLanguage(){
  document.querySelector(".map-badge b").textContent="● "+t("radar");
  document.querySelector(".dial-callout strong").textContent=t("freq");
  document.querySelector(".dial-callout span").textContent=t("listen");
- document.getElementById("profileLogin").textContent=t("login");
- document.getElementById("profileCreate").textContent=t("create");
+ document.getElementById("profileContinue").textContent=currentLang==="pt"?"CONTINUAR":"CONTINUAR";
  document.getElementById("profileSave").textContent=t("save");
- document.getElementById("profileLogout").textContent=t("logout");
+ document.getElementById("profileLogout").textContent=currentLang==="pt"?"TROCAR OPERADOR":"CAMBIAR OPERADOR";
  updateProfileUI();
  renderActivity();
  if(communityStatsCache)loadCommunityStats();
 }
 
-document.getElementById("emailSendCode").addEventListener("click",sendEmailOtp);
-document.getElementById("emailVerifyCode").addEventListener("click",verifyEmailOtp);
 document.getElementById("watchAdd").addEventListener("click",addWatch);
 document.getElementById("watchCall").addEventListener("keydown",e=>{if(e.key==="Enter")addWatch()});
 
@@ -1647,8 +1601,7 @@ document.getElementById("profileToggle").addEventListener("click",openProfileMod
 document.getElementById("profileClose").addEventListener("click",closeProfileModal);
 document.getElementById("profileCancel").addEventListener("click",closeProfileModal);
 document.getElementById("profileCancel2").addEventListener("click",closeProfileModal);
-document.getElementById("profileLogin").addEventListener("click",()=>profileAction("login"));
-document.getElementById("profileCreate").addEventListener("click",()=>profileAction("create"));
+document.getElementById("profileContinue").addEventListener("click",()=>profileAction("identify"));
 document.getElementById("profileSave").addEventListener("click",()=>profileAction("update"));
 document.getElementById("profileLogout").addEventListener("click",()=>{
  sessionToken="";currentProfile=null;personalMode=false;personalScores.clear();votedCalls.clear();watchlist.clear();watchAlertedCalls.clear();
@@ -1791,7 +1744,7 @@ function maybeAlertChannel(s){
   if(restoringHistory)return;
 
   const channelAlert=s.isChannel && !alertedChannelCalls.has(s.dx);
-  const personalAlert=isWatched(s.dx) && currentProfile?.email_verified && !watchAlertedCalls.has(s.dx);
+  const personalAlert=isWatched(s.dx) && currentProfile && !watchAlertedCalls.has(s.dx);
 
   if(channelAlert){
     alertedChannelCalls.add(s.dx);
