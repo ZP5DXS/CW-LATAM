@@ -1678,9 +1678,10 @@ body.has-profile .side-tabs{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.25-community12-final-tabs";
+const CWLATAM_BUILD="2026.08.25-release-candidate1";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
+const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
 const spots=[],active=new Map(),mapObjects=[],mapByCall=new Map();
 let totalSpots=0,lastSpotAt=0;
 
@@ -1703,6 +1704,28 @@ const stationDB={
 "DL":{country:"Alemania",flag:"🇩🇪",lat:50.11,lon:8.68},"JA":{country:"Japón",flag:"🇯🇵",lat:35.68,lon:139.76},
 "VK":{country:"Australia",flag:"🇦🇺",lat:-33.87,lon:151.21}
 };
+
+// Coordenadas aproximadas de prefijos regionales usados como receptores.
+// Evita que prefijos SA válidos sin entrada propia caigan en (0,0).
+const PREFIX_ALIASES={
+  "AY":"LU","AZ":"LU","LO":"LU","LP":"LU","LQ":"LU","LR":"LU","LS":"LU","LT":"LU","LV":"LU",
+  "PP":"PY","PQ":"PY","PR":"PY","PS":"PY","PV":"PY","PW":"PY","PX":"PY","ZY":"PY","ZZ":"PY",
+  "CA":"CE","CB":"CE","CC":"CE","CD":"CE","XQ":"CE",
+  "OB":"OA","HD":"HC","YW":"YV","YY":"YV","HJ":"HK"
+};
+for(const [alias,base] of Object.entries(PREFIX_ALIASES)){
+  if(!stationDB[alias]&&stationDB[base])stationDB[alias]=stationDB[base];
+}
+Object.assign(stationDB,{
+  "8R":{country:"Guyana",flag:"🇬🇾",lat:6.80,lon:-58.16},
+  "9Y":{country:"Trinidad y Tobago",flag:"🇹🇹",lat:10.66,lon:-61.52},
+  "9Z":{country:"Trinidad y Tobago",flag:"🇹🇹",lat:10.66,lon:-61.52},
+  "P4":{country:"Aruba",flag:"🇦🇼",lat:12.52,lon:-70.04},
+  "PJ2":{country:"Curaçao",flag:"🇨🇼",lat:12.17,lon:-68.99},
+  "PJ4":{country:"Bonaire",flag:"🇧🇶",lat:12.15,lon:-68.27},
+  "PJ9":{country:"Curaçao",flag:"🇨🇼",lat:12.17,lon:-68.99},
+  "VP8":{country:"Atlántico Sur",flag:"🌐",lat:-51.70,lon:-57.85}
+});
 
 function prefixInfo(call){
  const c=(call||"").toUpperCase();
@@ -1797,9 +1820,13 @@ function drawMapSpot(s){
  if(!visual){
    const label=L.marker(dxPos,{
      icon:createSpotLabel(s),
-     interactive:false,
+     interactive:true,
      zIndexOffset:500
    }).addTo(map);
+   label.on("click",()=>{
+     silenceSpotAlert(s.dx);
+     openQRZ(s.dx);
+   });
    const leader=L.polyline([dxPos,dxPos],{
      color,weight:1,opacity:.55,dashArray:"2 5",interactive:false
    }).addTo(map);
@@ -1940,12 +1967,12 @@ function pruneMap(){
  // Cada recepción deja una traza que pierde opacidad con el tiempo.
  for(let i=mapObjects.length-1;i>=0;i--){
    const o=mapObjects[i],age=now-o.ts;
-   if(age>=ACTIVE_MS){
+   if(age>=TRAIL_MS){
      map.removeLayer(o.trail);
      map.removeLayer(o.spotterDot);
      mapObjects.splice(i,1);
    }else{
-     const opacity=Math.max(0,1-age/ACTIVE_MS);
+     const opacity=Math.max(0,1-age/TRAIL_MS);
      o.trail.setStyle({opacity:.72*opacity});
      o.spotterDot.setStyle({opacity:.7*opacity,fillOpacity:.55*opacity});
    }
@@ -1985,6 +2012,9 @@ function prune(){
    if(now-v.last>ACTIVE_MS || v.spotters.size===0){
      active.delete(k);
      alertedChannelCalls.delete(k);
+     watchAlertedCalls.delete(k);
+     votedCalls.delete(k);
+     personalScores.delete(k);
    }
  }
  pruneMap();renderActivity();renderDial();renderMapStatus()
@@ -2000,6 +2030,7 @@ let focusMode=false;
 let personalMode=false;
 const personalScores=new Map();
 let personalFocusTimer=null;
+let personalFocusRequestSeq=0;
 
 function focusMetrics(v){
  const center=map.getCenter();
@@ -2932,6 +2963,7 @@ function schedulePersonalFocusRefresh(){
 
 async function refreshPersonalFocus(){
  if(!currentProfile?.focus_unlocked||!sessionToken)return;
+ const requestSeq=++personalFocusRequestSeq;
  const candidates=[...active.entries()].map(([call,v])=>({
    dx_call:call,
    frequency:Number(v.actualFreq||v.freq),
@@ -2941,7 +2973,7 @@ async function refreshPersonalFocus(){
  if(!candidates.length)return;
  try{
    const {data,error}=await sb.rpc("cw_focus_scores_v2",{p_token:sessionToken,p_candidates:candidates});
-   if(error||data?.locked)return;
+   if(error||data?.locked||requestSeq!==personalFocusRequestSeq)return;
    personalScores.clear();
    for(const s of data.scores||[])personalScores.set(s.dx_call,s);
 
@@ -3250,10 +3282,14 @@ document.getElementById("langToggle").addEventListener("click",()=>{
  loadModelStats();
  loadSeasonData();
  applyLanguage();
- setInterval(()=>{void sb.rpc("cw_add_usage",{p_visitor_id:visitorId,p_seconds:60}).then(()=>{},()=>{});},60000);
- setInterval(loadCommunityStats,60000);
- setInterval(loadCountryStats,120000);
- setInterval(loadModelStats,60000);
+ setInterval(()=>{
+   if(document.visibilityState==="visible"){
+     void sb.rpc("cw_add_usage",{p_visitor_id:visitorId,p_seconds:60}).then(()=>{},()=>{});
+   }
+ },60000);
+ setInterval(loadCommunityStats,120000);
+ setInterval(loadCountryStats,600000);
+ setInterval(loadModelStats,300000);
  setInterval(botLiveInsight,45000);
  setTimeout(botLiveInsight,1800);
 })();
@@ -3539,6 +3575,7 @@ function connectRBN(){
 }
 
 async function pollLiveSpots(){
+ if(document.hidden)return;
  if(pollBusy)return;
  pollBusy=true;
 

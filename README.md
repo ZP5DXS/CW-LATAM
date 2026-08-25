@@ -4,6 +4,12 @@
 
 🇧🇷 **Português:** [README-PT.md](README-PT.md)
 
+## [🚀 PROBAR AHORA](https://zp5dxs.github.io/CW-LATAM/)
+
+### 👉 [https://zp5dxs.github.io/CW-LATAM/](https://zp5dxs.github.io/CW-LATAM/)
+
+---
+
 **CW LATAM IA** es un proyecto gratuito, sin anuncios y open source creado por **Mathias Maidana — ZP5DXS** para ayudar a los operadores de CW de Latinoamérica a **encontrarse, escucharse y coordinar contactos en tiempo real**, con especial atención a la frecuencia de encuentro **7.033 MHz — LXCW QRS**.
 
 La idea es sencilla: los spots de la red nos dicen que una estación está siendo escuchada, pero la propagación real no es igual para todos. CW LATAM agrega la experiencia de los propios operadores para convertir esos datos en información cada vez más útil para cada estación.
