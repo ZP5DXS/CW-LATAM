@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="theme-color" content="#07110d"/>
-<title>CW LATAM IA — Radar CW inteligente en 40 m</title>
+<title>CW LATAM IA — Radar CW colaborativo y personalizado</title>
 <meta name="description" content="Radar CW colaborativo e inteligente para 40 metros en Latinoamérica, con recomendaciones personalizadas de escucha."/>
 <link rel="preconnect" href="https://unpkg.com">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
@@ -319,6 +319,84 @@ html[data-theme="light"] .moon-icon{display:none}
   .community-stats{display:none}
 }
 
+
+/* ===== COMMUNITY 2 ===== */
+.vote-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.vote-btn{
+  min-width:72px;display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  border-radius:999px;padding:6px 9px;background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.01));
+  font-size:8px;letter-spacing:.035em;transition:transform .15s,border-color .15s,background .15s
+}
+.vote-btn:hover{transform:translateY(-1px)}
+.vote-btn .sig{width:7px;height:7px;border-radius:50%;box-shadow:0 0 8px currentColor}
+.vote-btn.green{background:rgba(88,255,146,.055)}
+.vote-btn.yellow{background:rgba(255,200,92,.055)}
+.vote-btn.red{background:rgba(255,90,90,.055)}
+.vote-done{
+  display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:5px 9px;border:1px solid var(--line);
+  border-radius:999px;font-size:8px;font-weight:900;color:var(--muted);background:var(--panel2)
+}
+.vote-done.r2{color:#65ff9e;border-color:rgba(88,255,146,.32)}
+.vote-done.r1{color:#ffd36b;border-color:rgba(255,200,92,.32)}
+.vote-done.r0{color:#ff7777;border-color:rgba(255,90,90,.32)}
+
+.chat-strip{
+  margin-top:10px;display:grid;grid-template-columns:170px minmax(0,1fr) 300px;
+  gap:10px;align-items:stretch;padding:9px 10px;min-height:92px
+}
+.chat-strip-head{display:flex;flex-direction:column;justify-content:center;padding:4px 6px}
+.chat-strip-title{font-size:10px;font-weight:900;letter-spacing:.12em}
+.chat-strip-sub{font-size:8px;color:var(--muted);margin-top:4px}
+.chat-list{
+  display:flex;flex-direction:row;gap:7px;overflow:auto;padding:0;min-height:70px;align-items:stretch
+}
+.chat-msg{min-width:210px;max-width:280px;height:70px;overflow:hidden;padding:7px 8px}
+.chat-compose{border:0;padding:0;display:flex;align-items:center}
+.chat-compose input{height:36px}
+.chat-compose button{height:36px}
+@media(max-width:980px){
+  .chat-strip{grid-template-columns:1fr}
+  .chat-strip-head{display:none}
+  .chat-compose{padding-top:2px}
+}
+
+.email-box,.watch-box{
+  margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)
+}
+.email-box h3,.watch-box h3{margin:0 0 5px;font-size:10px;letter-spacing:.08em}
+.email-row,.watch-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.email-row input,.watch-row input{
+  flex:1;min-width:160px;border:1px solid var(--line);border-radius:9px;background:var(--panel);
+  color:var(--text);padding:9px 10px
+}
+.email-row button,.watch-row button{
+  border:1px solid var(--line);border-radius:9px;background:#123120;color:#eaffef;
+  padding:8px 10px;font-weight:900;cursor:pointer
+}
+.verify-state{font-size:9px;color:var(--muted);line-height:1.4}
+.verify-state.ok{color:var(--green)}
+.watch-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.watch-tag{
+  display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,75,75,.38);
+  color:#ff7777;background:rgba(120,10,10,.08);border-radius:999px;padding:5px 8px;
+  font:900 9px ui-monospace,monospace
+}
+.watch-tag button{border:0;background:transparent;color:inherit;cursor:pointer;padding:0}
+.watch-alert{
+  border-color:#ff4d4d!important;
+  background:linear-gradient(145deg,rgba(90,12,12,.75),rgba(35,5,5,.84))!important;
+  box-shadow:0 0 0 1px rgba(255,70,70,.18),0 0 24px rgba(255,40,40,.12)
+}
+.watch-badge{
+  display:inline-block;margin-left:6px;padding:2px 6px;border-radius:999px;
+  background:#d92d2d;color:#fff;font-size:7px;font-weight:900;letter-spacing:.06em
+}
+.spot-label.watch{
+  border-color:#ff4d4d!important;background:rgba(70,6,6,.94)!important;
+  box-shadow:0 0 28px rgba(255,40,40,.3)!important
+}
+.dial-spot.watch{color:#ff5757!important;font-weight:900}
+
 </style>
 </head>
 <body>
@@ -326,7 +404,7 @@ html[data-theme="light"] .moon-icon{display:none}
 <header class="topbar">
   <div class="brand">
     <div class="logo"></div>
-    <div><h1>CW LATAM IA</h1><small>RADAR CW INTELIGENTE · 40 M · LATAM</small></div>
+    <div><h1>CW LATAM IA</h1><small>RADAR CW COLABORATIVO · IA · 40 M · LATAM</small></div>
   </div>
   <div class="statuses">
     <span class="pill live"><span class="dot"></span><span id="liveState">DESCONECTADO</span></span>
@@ -413,29 +491,29 @@ html[data-theme="light"] .moon-icon{display:none}
 <aside class="panel live-decode">
   <div class="panel-head">
     <div>
-      <div class="tabs">
-        <button class="tab-btn active" id="activityTab">ACTIVIDAD</button>
-        <button class="tab-btn" id="chatTab">CHAT</button>
-      </div>
+      <div class="panel-title" id="activityTitle">ACTIVIDAD</div>
       <div class="panel-sub" id="rightPanelSub">Se mantiene mientras siga activo</div>
     </div>
     <div class="panel-sub">10 MIN</div>
   </div>
-
   <div class="decode-stream activity-pane" id="decodeStream">
     <div class="empty">Esperando actividad CW…</div>
-  </div>
-
-  <div class="chat-pane" id="chatPane">
-    <div class="chat-list" id="chatList"><div class="empty">Sin mensajes todavía.</div></div>
-    <div class="chat-compose">
-      <input id="chatInput" maxlength="280" placeholder="Mensaje breve…">
-      <button id="chatSend">ENVIAR</button>
-    </div>
   </div>
 </aside>
 
 </main>
+
+<section class="panel chat-strip">
+  <div class="chat-strip-head">
+    <div class="chat-strip-title" id="chatStripTitle">CHAT CW LATAM</div>
+    <div class="chat-strip-sub" id="chatStripSub">Texto simple · sin sonidos</div>
+  </div>
+  <div class="chat-list" id="chatList"><div class="empty">Sin mensajes todavía.</div></div>
+  <div class="chat-compose">
+    <input id="chatInput" maxlength="280" placeholder="Mensaje breve…">
+    <button id="chatSend">ENVIAR</button>
+  </div>
+</section>
 
 <footer class="footer">
   <span>GRATIS · SIN ANUNCIOS · OPEN SOURCE</span>
@@ -465,6 +543,30 @@ html[data-theme="light"] .moon-icon{display:none}
       </div>
     </div>
 
+
+    <div class="email-box">
+      <h3>EMAIL · RECUPERACIÓN Y MI FOCO</h3>
+      <div class="verify-state" id="emailState">Opcional para usar la web. Obligatorio para MI FOCO y Mis Alertas.</div>
+      <div class="email-row">
+        <input id="profileEmail" type="email" autocomplete="email" placeholder="tu@email.com">
+        <button id="emailSendCode">ENVIAR CÓDIGO</button>
+      </div>
+      <div class="email-row">
+        <input id="emailOtp" inputmode="numeric" maxlength="8" placeholder="Código recibido">
+        <button id="emailVerifyCode">VERIFICAR / RECUPERAR</button>
+      </div>
+    </div>
+
+    <div class="watch-box" id="watchBox">
+      <h3>MIS ALERTAS</h3>
+      <div class="verify-state" id="watchState">Verificá tu email para activar alertas personales.</div>
+      <div class="watch-row">
+        <input id="watchCall" maxlength="16" placeholder="Ej. VP8DX">
+        <button id="watchAdd">AGREGAR</button>
+      </div>
+      <div class="watch-tags" id="watchTags"></div>
+    </div>
+
     <div id="profileState" class="profile-summary"></div>
     <div class="focus-progress"><i id="profileProgressBar"></i></div>
 
@@ -486,7 +588,7 @@ html[data-theme="light"] .moon-icon{display:none}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.25-community1";
+const CWLATAM_BUILD="2026.08.25-community2";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const spots=[],active=new Map(),mapObjects=[],mapByCall=new Map();
@@ -559,12 +661,16 @@ map.on("zoomend moveend resize",layoutMapLabels);
 function createSpotLabel(s){
  const info=prefixInfo(s.dx),latam=isLATAM(s.dx);
  const channel=s.isChannel;
- const cls=channel?"channel":(latam?"":"dx");
+ const watched=isWatched(s.dx);
+ const cls=channel?"channel":(watched?"watch":(latam?"":"dx"));
  const freqLine=channel
    ? `7033.0 kHz <span style="color:#ffaaaa">(${s.actualFreq.toFixed(1)})</span>`
    : `${s.freq.toFixed(1)} kHz`;
+ const badge=channel
+   ? '<span class="channel-badge">7033</span>'
+   : (watched?'<span class="watch-badge">ALERTA</span>':"");
  const html=`<div class="spot-label ${cls}">
-   <div class="c">${info.flag} ${s.dx}${channel?'<span class="channel-badge">7033</span>':""}</div>
+   <div class="c">${info.flag} ${s.dx}${badge}</div>
    <div>${freqLine} · ${s.snr>=0?"+":""}${s.snr} dB</div>
    <div class="m" data-age="${s.ts}">0s</div>
  </div>`;
@@ -919,12 +1025,22 @@ function renderActivity(){
      ? `<span class="ai-badge">IA ${Math.round(ai.probability)}%</span>`
      : "";
 
-   return `<div class="decode-item ${v.isChannel?"channel-alert":""}" style="opacity:${opacity}">
+   const watched=isWatched(call);
+   const voted=votedCalls.has(call)?Number(votedCalls.get(call)):null;
+   const alertClass=v.isChannel?"channel-alert":(watched?"watch-alert":"");
+   const voteHtml=voted===null
+     ? `<div class="vote-row">
+          <button class="vote-btn green" onclick="event.stopPropagation();voteCall('${call}',2)"><span class="sig"></span>${t("hear")}</button>
+          <button class="vote-btn yellow" onclick="event.stopPropagation();voteCall('${call}',1)"><span class="sig"></span>${t("weak")}</button>
+          <button class="vote-btn red" onclick="event.stopPropagation();voteCall('${call}',0)"><span class="sig"></span>${t("noHear")}</button>
+        </div>`
+     : `<div class="vote-done r${voted}">✓ ${t("reported")}</div>`;
+   return `<div class="decode-item ${alertClass}" onclick="${v.isChannel||watched?`silenceSpotAlert('${call}')`:""}" style="opacity:${opacity}">
      <div class="flag">${info.flag}</div>
      <div class="decode-main">
        <div class="decode-call">
-         <span class="call-link" onclick="openQRZ('${call}')">${call} ↗</span>
-         ${v.isChannel?'<span class="channel-badge">7033</span>':""}
+         <span class="call-link" onclick="event.stopPropagation();silenceSpotAlert('${call}');openQRZ('${call}')">${call} ↗</span>
+         ${v.isChannel?'<span class="channel-badge">7033</span>':(watched?'<span class="watch-badge">ALERTA</span>':"")}
          ${aiBadge}
        </div>
        <div class="decode-meta">
@@ -932,11 +1048,7 @@ function renderActivity(){
          ${v.lastSpot.snr>=0?"+":""}${v.lastSpot.snr} dB ·
          ${v.lastSpot.wpm||"—"} WPM
        </div>
-       <div class="vote-row">
-         <button class="vote-btn green" onclick="voteCall('${call}',2)">● ${t("hear")}</button>
-         <button class="vote-btn yellow" onclick="voteCall('${call}',1)">● ${t("weak")}</button>
-         <button class="vote-btn red" onclick="voteCall('${call}',0)">● ${t("noHear")}</button>
-       </div>
+       ${voteHtml}
      </div>
      <div class="decode-right">
        <div class="decode-freq">${v.isChannel?"7033.0":v.freq.toFixed(1)}</div>
@@ -965,7 +1077,8 @@ function renderDial(){
    laneLast[lane]=pct;
    const top=24+lane*18;
    const opacity=Math.max(0,1-(Date.now()-v.last)/ACTIVE_MS);
-   return `<div class="dial-spot ${v.isChannel?"channel":""}" onclick="openQRZ(\'${call}\')" style="left:${pct}%;top:${top}px;opacity:${opacity};cursor:pointer" title="${call} ${v.actualFreq?.toFixed?.(1) || v.freq.toFixed(1)}">${call}</div>`
+   const dialAlert=v.isChannel?"channel":(isWatched(call)?"watch":"");
+    return `<div class="dial-spot ${dialAlert}" onclick="silenceSpotAlert('${call}');openQRZ('${call}')" style="left:${pct}%;top:${top}px;opacity:${opacity};cursor:pointer" title="${call} ${v.actualFreq?.toFixed?.(1) || v.freq.toFixed(1)}">${call}</div>`
  }).join("")
 }
 function render(){renderActivity();renderDial();renderMapStatus()}
@@ -1007,6 +1120,10 @@ let countryInfo={code:"",name:""};
 let currentLang=localStorage.getItem("cwlatam_lang")||"es";
 let chatChannel=null;
 let communityStatsCache=null;
+const votedCalls=new Map();
+const watchlist=new Set();
+const watchAlertedCalls=new Set();
+let pendingOtpEmail="";
 
 if(!visitorId){
   visitorId=(crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`);
@@ -1022,7 +1139,7 @@ const I18N={
    login:"ENTRAR",create:"CREAR PERFIL",save:"GUARDAR CAMBIOS",logout:"CERRAR SESIÓN",
    send:"ENVIAR",msg:"Mensaje breve…",region:"REGIÓN",focus:"FOCO 1500 KM",myFocus:"MI FOCO IA",
    locked:"MI FOCO se activa al llegar a 100 reportes.",needProfile:"Completá CALLSIGN + LOCATOR para participar.",
-   voteSaved:"Reporte guardado",chatNeed:"Necesitás tu perfil para chatear.",
+   voteSaved:"Reporte guardado",reported:"REPORTADO",emailNeeded:"Verificá tu email para activar MI FOCO.",chatNeed:"Necesitás tu perfil para chatear.",
    radar:"RADAR CW",freq:"FRECUENCIA LXCW QRS",listen:"LLAMÁ / ESCUCHÁ EN 7.033 MHz"
  },
  pt:{
@@ -1033,12 +1150,20 @@ const I18N={
    login:"ENTRAR",create:"CRIAR PERFIL",save:"SALVAR ALTERAÇÕES",logout:"SAIR",
    send:"ENVIAR",msg:"Mensagem curta…",region:"REGIÃO",focus:"FOCO 1500 KM",myFocus:"MEU FOCO IA",
    locked:"MEU FOCO é liberado ao chegar a 100 relatórios.",needProfile:"Preencha CALLSIGN + LOCATOR para participar.",
-   voteSaved:"Relatório salvo",chatNeed:"Você precisa do seu perfil para conversar.",
+   voteSaved:"Relatório salvo",reported:"REPORTADO",emailNeeded:"Verifique seu email para ativar MEU FOCO.",chatNeed:"Você precisa do seu perfil para conversar.",
    radar:"RADAR CW",freq:"FREQUÊNCIA LXCW QRS",listen:"CHAME / ESCUTE EM 7.033 MHz"
  }
 };
 
 function t(k){return (I18N[currentLang]||I18N.es)[k]||k}
+function isWatched(call){return watchlist.has(String(call||"").toUpperCase())}
+function silenceSpotAlert(call){
+  stopCWAlert();
+  const c=String(call||"").toUpperCase();
+  alertedChannelCalls.add(c);
+  watchAlertedCalls.add(c);
+}
+window.silenceSpotAlert=silenceSpotAlert;
 function countryFlag(code){
  if(!code||code.length!==2)return "🌐";
  return String.fromCodePoint(...code.toUpperCase().split("").map(c=>127397+c.charCodeAt(0)));
@@ -1117,8 +1242,146 @@ async function restoreProfile(){
      return;
    }
    currentProfile=data.profile;
+   await loadAccountState();
+   await loadRecentVotes();
+   await loadWatchlist();
    updateProfileUI();
  }catch{}
+}
+
+
+async function loadAccountState(){
+ if(!sessionToken||!currentProfile)return;
+ try{
+   const {data,error}=await sb.rpc("cw_account_state",{p_token:sessionToken});
+   if(error||!data?.ok)return;
+   currentProfile.email=data.email||"";
+   currentProfile.email_verified=Boolean(data.email_verified);
+   currentProfile.votes_count=Number(data.votes_count||currentProfile.votes_count||0);
+   currentProfile.focus_unlocked=Boolean(data.focus_unlocked);
+   if(currentProfile.email)document.getElementById("profileEmail").value=currentProfile.email;
+ }catch{}
+}
+
+async function loadRecentVotes(){
+ votedCalls.clear();
+ if(!sessionToken||!currentProfile)return;
+ try{
+   const {data,error}=await sb.rpc("cw_recent_votes",{p_token:sessionToken});
+   if(error)return;
+   for(const v of data?.votes||[]){
+     votedCalls.set(String(v.dx_call||"").toUpperCase(),Number(v.rating));
+   }
+   renderActivity();
+ }catch{}
+}
+
+async function loadWatchlist(){
+ watchlist.clear();
+ if(!sessionToken||!currentProfile)return;
+ try{
+   const {data,error}=await sb.rpc("cw_watchlist_get",{p_token:sessionToken});
+   if(error)return;
+   for(const item of data?.items||[])watchlist.add(String(item.callsign||"").toUpperCase());
+   renderWatchlist();
+   refreshWatchVisuals();
+   renderActivity();
+   renderDial();
+ }catch{}
+}
+
+function renderWatchlist(){
+ const tags=document.getElementById("watchTags");
+ const state=document.getElementById("watchState");
+ const input=document.getElementById("watchCall");
+ const add=document.getElementById("watchAdd");
+ const verified=Boolean(currentProfile?.email_verified);
+
+ state.textContent=verified
+   ? "Los indicativos de esta lista generan una alerta CW cuando aparecen activos."
+   : "Verificá tu email para activar alertas personales.";
+ state.classList.toggle("ok",verified);
+ input.disabled=!verified;
+ add.disabled=!verified;
+
+ tags.innerHTML=[...watchlist].sort().map(call=>
+   `<span class="watch-tag">${call}<button onclick="removeWatch('${call}')" title="Eliminar">×</button></span>`
+ ).join("");
+}
+
+function refreshWatchVisuals(){
+ for(const [call,visual] of mapByCall){
+   const v=active.get(call);
+   if(v?.lastSpot)visual.label.setIcon(createSpotLabel(v.lastSpot));
+ }
+}
+
+async function addWatch(){
+ if(!currentProfile?.email_verified){openProfileModal();showToast("Verificá tu email primero");return}
+ const input=document.getElementById("watchCall");
+ const call=input.value.trim().toUpperCase();
+ if(!call)return;
+ const {data,error}=await sb.rpc("cw_watchlist_add",{p_token:sessionToken,p_callsign:call});
+ if(error){showToast("No se pudo agregar");return}
+ input.value="";
+ watchlist.clear();
+ for(const x of data?.items||[])watchlist.add(String(x.callsign||"").toUpperCase());
+ renderWatchlist();refreshWatchVisuals();renderActivity();renderDial();
+}
+async function removeWatch(call){
+ const {data,error}=await sb.rpc("cw_watchlist_remove",{p_token:sessionToken,p_callsign:call});
+ if(error)return;
+ watchlist.clear();
+ for(const x of data?.items||[])watchlist.add(String(x.callsign||"").toUpperCase());
+ watchAlertedCalls.delete(String(call).toUpperCase());
+ renderWatchlist();refreshWatchVisuals();renderActivity();renderDial();
+}
+window.removeWatch=removeWatch;
+
+async function sendEmailOtp(){
+ const email=document.getElementById("profileEmail").value.trim().toLowerCase();
+ if(!email){showToast("Ingresá tu email");return}
+ const {error}=await sb.auth.signInWithOtp({
+   email,
+   options:{shouldCreateUser:true}
+ });
+ if(error){showToast("No se pudo enviar el código");return}
+ pendingOtpEmail=email;
+ showToast("Código enviado por email");
+}
+
+async function verifyEmailOtp(){
+ const email=(pendingOtpEmail||document.getElementById("profileEmail").value).trim().toLowerCase();
+ const token=document.getElementById("emailOtp").value.trim();
+ if(!email||!token){showToast("Ingresá email y código");return}
+
+ const {error}=await sb.auth.verifyOtp({email,token,type:"email"});
+ if(error){showToast("Código inválido o vencido");return}
+
+ try{
+   if(currentProfile&&sessionToken){
+     const {data,error:linkError}=await sb.rpc("cw_link_auth_email",{p_token:sessionToken});
+     if(linkError)throw linkError;
+     currentProfile.email=data.email;
+     currentProfile.email_verified=true;
+     showToast("Email verificado");
+   }else{
+     const {data,error:recoverError}=await sb.rpc("cw_recover_profile_from_auth");
+     if(recoverError)throw recoverError;
+     sessionToken=data.session_token;
+     localStorage.setItem("cwlatam_profile_token",sessionToken);
+     currentProfile=data.profile;
+     showToast("Perfil recuperado");
+   }
+
+   document.getElementById("emailOtp").value="";
+   await loadAccountState();
+   await loadRecentVotes();
+   await loadWatchlist();
+   updateProfileUI();
+ }catch(err){
+   showToast("Email verificado, pero no está vinculado a un perfil");
+ }
 }
 
 function updateProfileUI(){
@@ -1138,6 +1401,18 @@ function updateProfileUI(){
  document.getElementById("guestActions").style.display=currentProfile?"none":"flex";
  document.getElementById("memberActions").style.display=currentProfile?"flex":"none";
  document.getElementById("pinField").style.display=currentProfile?"none":"block";
+
+ const emailState=document.getElementById("emailState");
+ if(currentProfile?.email_verified){
+   emailState.textContent=`✓ Email verificado · ${currentProfile.email||""}`;
+   emailState.classList.add("ok");
+ }else{
+   emailState.textContent=currentProfile
+     ?"Verificá un email para habilitar MI FOCO, Mis Alertas y recuperación."
+     :"Podés recuperar un perfil ya vinculado ingresando tu email y el código recibido.";
+   emailState.classList.remove("ok");
+ }
+ renderWatchlist();
 
  if(currentProfile){
    document.getElementById("profileCall").value=currentProfile.callsign||"";
@@ -1185,6 +1460,9 @@ async function profileAction(mode){
      localStorage.setItem("cwlatam_profile_token",sessionToken);
    }
    currentProfile=data?.profile||currentProfile;
+   await loadAccountState();
+   await loadRecentVotes();
+   await loadWatchlist();
    updateProfileUI();
    closeProfileModal();
    showToast("OK");
@@ -1214,6 +1492,7 @@ async function voteCall(call,rating){
    if(error)throw error;
    currentProfile.votes_count=data.votes_count;
    currentProfile.focus_unlocked=data.focus_unlocked;
+   votedCalls.set(String(call).toUpperCase(),Number(rating));
    updateProfileUI();
    showToast(`${t("voteSaved")} · ${data.votes_count}/100`);
    if(data.counted&&data.votes_count%10===0){
@@ -1239,7 +1518,7 @@ async function refreshPersonalFocus(){
  }));
  if(!candidates.length)return;
  try{
-   const {data,error}=await sb.rpc("cw_focus_scores",{p_token:sessionToken,p_candidates:candidates});
+   const {data,error}=await sb.rpc("cw_focus_scores_v2",{p_token:sessionToken,p_candidates:candidates});
    if(error||data?.locked)return;
    personalScores.clear();
    for(const s of data.scores||[])personalScores.set(s.dx_call,s);
@@ -1250,8 +1529,13 @@ async function refreshPersonalFocus(){
 function activatePersonalFocus(){
  if(!currentProfile){openProfileModal();showToast(t("needProfile"));return}
  if(!currentProfile.focus_unlocked){
+   const missing=Math.max(0,100-(currentProfile.votes_count||0));
+   showToast(currentLang==="pt"?`Faltam ${missing} votos para ativar MEU FOCO.`:`Te faltan ${missing} votos para activar MI FOCO.`);
+   return;
+ }
+ if(!currentProfile.email_verified){
    openProfileModal();
-   showToast(`${t("locked")} ${Math.max(0,100-(currentProfile.votes_count||0))}`);
+   showToast(t("emailNeeded"));
    return;
  }
  personalMode=true;
@@ -1329,24 +1613,13 @@ async function loadCommunityStats(){
  }catch{}
 }
 
-function setRightTab(tab){
- const chat=tab==="chat";
- document.getElementById("activityTab").classList.toggle("active",!chat);
- document.getElementById("chatTab").classList.toggle("active",chat);
- document.getElementById("decodeStream").classList.toggle("hidden",chat);
- document.getElementById("chatPane").classList.toggle("active",chat);
- document.getElementById("rightPanelSub").textContent=chat?t("chat"):t("activeSub");
- if(chat)loadChat();
-}
-
 function applyLanguage(){
  document.documentElement.lang=currentLang==="pt"?"pt-BR":"es";
  document.title=currentLang==="pt"
    ?"CW LATAM IA — Radar CW inteligente em 40 m"
    :"CW LATAM IA — Radar CW inteligente en 40 m";
  document.getElementById("langToggle").textContent=currentLang==="pt"?"PT":"ES";
- document.getElementById("activityTab").textContent=t("activity");
- document.getElementById("chatTab").textContent=t("chat");
+   document.getElementById("activityTitle").textContent=t("activity");
  document.getElementById("rightPanelSub").textContent=t("activeSub");
  document.getElementById("chatInput").placeholder=t("msg");
  document.getElementById("chatSend").textContent=t("send");
@@ -1365,6 +1638,11 @@ function applyLanguage(){
  if(communityStatsCache)loadCommunityStats();
 }
 
+document.getElementById("emailSendCode").addEventListener("click",sendEmailOtp);
+document.getElementById("emailVerifyCode").addEventListener("click",verifyEmailOtp);
+document.getElementById("watchAdd").addEventListener("click",addWatch);
+document.getElementById("watchCall").addEventListener("keydown",e=>{if(e.key==="Enter")addWatch()});
+
 document.getElementById("profileToggle").addEventListener("click",openProfileModal);
 document.getElementById("profileClose").addEventListener("click",closeProfileModal);
 document.getElementById("profileCancel").addEventListener("click",closeProfileModal);
@@ -1373,12 +1651,10 @@ document.getElementById("profileLogin").addEventListener("click",()=>profileActi
 document.getElementById("profileCreate").addEventListener("click",()=>profileAction("create"));
 document.getElementById("profileSave").addEventListener("click",()=>profileAction("update"));
 document.getElementById("profileLogout").addEventListener("click",()=>{
- sessionToken="";currentProfile=null;personalMode=false;personalScores.clear();
+ sessionToken="";currentProfile=null;personalMode=false;personalScores.clear();votedCalls.clear();watchlist.clear();watchAlertedCalls.clear();
  localStorage.removeItem("cwlatam_profile_token");
  updateProfileUI();closeProfileModal();renderActivity();
 });
-document.getElementById("activityTab").addEventListener("click",()=>setRightTab("activity"));
-document.getElementById("chatTab").addEventListener("click",()=>setRightTab("chat"));
 document.getElementById("chatSend").addEventListener("click",sendChat);
 document.getElementById("chatInput").addEventListener("keydown",e=>{if(e.key==="Enter")sendChat()});
 document.getElementById("langToggle").addEventListener("click",()=>{
@@ -1391,6 +1667,7 @@ document.getElementById("langToggle").addEventListener("click",()=>{
  await recordVisit();
  await restoreProfile();
  subscribeChat();
+ loadChat();
  loadCommunityStats();
  applyLanguage();
  setInterval(()=>{void sb.rpc("cw_add_usage",{p_visitor_id:visitorId,p_seconds:60}).then(()=>{},()=>{});},60000);
@@ -1449,6 +1726,12 @@ function playTone(ctx,start,duration,freq=700){
   osc.stop(start+duration+0.02);
 }
 
+function stopCWAlert(){
+  if(audioCtx){
+    try{audioCtx.close()}catch{}
+    audioCtx=null;
+  }
+}
 function playMorseCQAlert(){
   if(!alertsEnabled)return;
 
@@ -1505,14 +1788,19 @@ function playMorseCQAlert(){
 }
 
 function maybeAlertChannel(s){
-  if(!s.isChannel || restoringHistory)return;
+  if(restoringHistory)return;
 
-  // El historial cargado al abrir nunca suena.
-  // El primer spot NUEVO recibido en vivo para cada indicativo sí alerta,
-  // aunque ese indicativo ya estuviera visible por el historial.
-  if(!alertedChannelCalls.has(s.dx)){
+  const channelAlert=s.isChannel && !alertedChannelCalls.has(s.dx);
+  const personalAlert=isWatched(s.dx) && currentProfile?.email_verified && !watchAlertedCalls.has(s.dx);
+
+  if(channelAlert){
     alertedChannelCalls.add(s.dx);
     playMorseCQAlert();
+  }
+
+  if(personalAlert){
+    watchAlertedCalls.add(s.dx);
+    if(!channelAlert)playMorseCQAlert();
   }
 }
 
@@ -1525,6 +1813,8 @@ document.getElementById("alertToggle").addEventListener("click",()=>{
   if(alertsEnabled){
     const ctx=getAudioContext();
     if(ctx && ctx.state==="suspended")ctx.resume();
+  }else{
+    stopCWAlert();
   }
 });
 
