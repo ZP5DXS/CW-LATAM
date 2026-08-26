@@ -1731,7 +1731,7 @@ body.has-profile .side-tabs{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.25-vote-stable-snapshot";
+const CWLATAM_BUILD="2026.08.26-vote-bugfix1";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -2065,6 +2065,14 @@ function pruneMap(){
 }
 function prune(){
  const now=Date.now();
+
+ // El cooldown del reporte humano es independiente de cuánto tiempo
+ // continúe activo el DX en la red.
+ for(const [call,raw] of votedCalls){
+   const at=(raw&&typeof raw==="object")?Number(raw.at||0):0;
+   if(!at || now-at>=REPORT_COOLDOWN_MS)votedCalls.delete(call);
+ }
+
  for(const[k,v]of active){
    for(const [spotter,raw] of v.spotters){
      const ts=(raw&&typeof raw==="object")?Number(raw.ts||0):Number(raw||0);
@@ -2074,7 +2082,6 @@ function prune(){
      active.delete(k);
      alertedChannelCalls.delete(k);
      watchAlertedCalls.delete(k);
-     votedCalls.delete(k);
      personalScores.delete(k);
    }
  }
@@ -2281,7 +2288,8 @@ function renderActivity(){
      : "";
 
    const watched=isWatched(call);
-   const voted=votedCalls.has(call)?Number(votedCalls.get(call)):null;
+   const votedEntry=votedState(call);
+   const voted=votedEntry===null?null:Number(votedEntry.rating);
    const alertClass=v.isChannel?"channel-alert":(watched?"watch-alert":"");
    const voteHtml=voted===null
      ? `<div class="vote-row ${currentProfile?"":"logged-out"}">
@@ -2420,7 +2428,23 @@ let modelStatsCache=null;
 let seasonStatusCache=null;
 let collaborationLeaderboardCache=null;
 let seasonLeaderboardCache=null;
+const REPORT_COOLDOWN_MS=10*60*1000;
 const votedCalls=new Map();
+
+function votedState(call){
+ const key=String(call||"").toUpperCase();
+ const raw=votedCalls.get(key);
+ if(raw==null)return null;
+
+ if(typeof raw==="number")return {rating:Number(raw),at:Date.now()};
+
+ const at=Number(raw.at||0);
+ if(!at || Date.now()-at>=REPORT_COOLDOWN_MS){
+   votedCalls.delete(key);
+   return null;
+ }
+ return {rating:Number(raw.rating),at};
+}
 const watchlist=new Set();
 const watchAlertedCalls=new Set();
 
@@ -2560,7 +2584,10 @@ async function loadRecentVotes(){
    const {data,error}=await sb.rpc("cw_recent_votes",{p_token:sessionToken});
    if(error)return;
    for(const v of data?.votes||[]){
-     votedCalls.set(String(v.dx_call||"").toUpperCase(),Number(v.rating));
+     const at=new Date(v.last_report_at||v.updated_at||v.created_at||Date.now()).getTime();
+     if(Date.now()-at<REPORT_COOLDOWN_MS){
+       votedCalls.set(String(v.dx_call||"").toUpperCase(),{rating:Number(v.rating),at});
+     }
    }
    renderActivity();
  }catch{}
@@ -3087,12 +3114,16 @@ async function voteCall(call,rating){
  let data=null;
 
  try{
+   // cw_vote() mantiene p_snr como INTEGER. La mediana puede ser x.5
+   // cuando hay un número par de receptores, por eso la redondeamos.
+   const voteSnr=Math.round(networkMedianSnr(v));
+
    const {data:voteData,error}=await sb.rpc("cw_vote",{
      p_token:sessionToken,
      p_dx_call:call,
      p_frequency:Number(v.actualFreq||v.freq),
      p_rating:rating,
-     p_snr:networkMedianSnr(v),
+     p_snr:voteSnr,
      p_spotter_count:snapshot.length,
      p_spot_seq:Number(v.lastSpot?.seq||0)||null
    });
@@ -3111,7 +3142,7 @@ async function voteCall(call,rating){
  }
 
  // A partir de acá el voto principal YA está confirmado.
- votedCalls.set(String(call).toUpperCase(),Number(rating));
+ votedCalls.set(String(call).toUpperCase(),{rating:Number(rating),at:Date.now()});
 
  if(data && typeof data==="object"){
    if(Number.isFinite(Number(data.votes_count))){
