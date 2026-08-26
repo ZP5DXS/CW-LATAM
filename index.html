@@ -1457,6 +1457,152 @@ body.has-profile .side-tabs{
   font-size:7px;
 }
 
+
+/* ===== CW LATAM · IMPROVEMENTS BUNDLE 1 ===== */
+
+/* Scrollbar general acorde al tema */
+html{
+  scrollbar-width:thin;
+  scrollbar-color:rgba(88,255,146,.34) rgba(4,13,8,.35);
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.decode-stream::-webkit-scrollbar,
+#viewStats::-webkit-scrollbar,
+#viewRewards::-webkit-scrollbar,
+.leaderboard-list::-webkit-scrollbar,
+.modal-card::-webkit-scrollbar{
+  width:8px;
+  height:8px;
+}
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+.decode-stream::-webkit-scrollbar-track,
+#viewStats::-webkit-scrollbar-track,
+#viewRewards::-webkit-scrollbar-track,
+.leaderboard-list::-webkit-scrollbar-track,
+.modal-card::-webkit-scrollbar-track{
+  background:rgba(4,13,8,.28);
+  border-radius:999px;
+}
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+.decode-stream::-webkit-scrollbar-thumb,
+#viewStats::-webkit-scrollbar-thumb,
+#viewRewards::-webkit-scrollbar-thumb,
+.leaderboard-list::-webkit-scrollbar-thumb,
+.modal-card::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg,rgba(88,255,146,.38),rgba(88,255,146,.18));
+  border:2px solid transparent;
+  background-clip:padding-box;
+  border-radius:999px;
+}
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover{
+  background-color:rgba(88,255,146,.52);
+}
+
+/* Chat: conserva scroll pero no muestra la barra */
+.chat-list{scrollbar-width:none!important;-ms-overflow-style:none}
+.chat-list::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}
+
+/* Selector MAPA / RADAR */
+.map-mode-toggle{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:3px;border:1px solid var(--line);border-radius:999px;
+  background:var(--panel2)
+}
+.map-mode-toggle button{
+  border:0;border-radius:999px;padding:5px 9px;
+  background:transparent;color:var(--muted);
+  font:900 7px ui-sans-serif,system-ui;letter-spacing:.08em;cursor:pointer
+}
+.map-mode-toggle button.active{background:#123120;color:var(--green)}
+html[data-theme="light"] .map-mode-toggle button.active{background:#dcebe1;color:#087d3e}
+
+/* MAPA: cartografía normal, sin sweep cinematográfico */
+html[data-map-mode="map"] .leaflet-tile{filter:none!important}
+html[data-map-mode="map"] .radar-rings,
+html[data-map-mode="map"] .radar-sweep{display:none}
+html[data-map-mode="map"] #map{background:#dce7df}
+
+/* RADAR: cartografía muy atenuada + overlay verde */
+html[data-map-mode="radar"] .leaflet-tile{
+  filter:grayscale(1) brightness(.27) contrast(1.3) sepia(.25) hue-rotate(72deg) saturate(1.9)!important
+}
+html[data-map-mode="radar"] #map{background:#020a05}
+html[data-map-mode="radar"] .radar-rings,
+html[data-map-mode="radar"] .radar-sweep{display:block}
+
+/* Badge IA más expresivo sin ocultar señales */
+.ai-badge{margin-left:6px}
+.ai-badge.high{
+  color:#6dffa4;border-color:rgba(88,255,146,.42);background:rgba(88,255,146,.09)
+}
+.ai-badge.mid{
+  color:#ffd36b;border-color:rgba(255,200,92,.38);background:rgba(255,200,92,.075)
+}
+.ai-badge.low{
+  color:#aebeb4;border-color:rgba(174,190,180,.24);background:rgba(174,190,180,.05)
+}
+.ai-word{opacity:.72;margin-left:3px;font-size:6px}
+
+/* Actividad + chat comparten el panel derecho */
+#viewActivity{overflow:hidden}
+#viewActivity .decode-stream{
+  flex:1 1 58%;
+  min-height:170px;
+}
+.activity-chat{
+  flex:0 0 36%;
+  min-height:190px;
+  max-height:285px;
+  border-top:1px solid var(--line);
+  display:flex;
+  flex-direction:column;
+  background:linear-gradient(180deg,rgba(255,255,255,.01),transparent)
+}
+.activity-chat .chat-top{padding:7px 10px;min-height:38px}
+.activity-chat .chat-strip-title{font-size:9px}
+.activity-chat .chat-list{flex:1;min-height:70px;max-height:none;padding:7px 9px}
+.activity-chat .chat-msg{min-height:40px;padding:6px 8px}
+.activity-chat .chat-text{font-size:9px;line-height:1.3}
+.activity-chat .chat-compose{padding:6px 8px 8px}
+.activity-chat .chat-compose input,
+.activity-chat .chat-compose button{height:34px}
+.activity-chat .chat-compose button{width:66px;font-size:7px}
+.activity-chat .chat-count{font-size:6.5px}
+
+/* Footer: países + visitas, sin texto repetitivo */
+.footer{
+  grid-template-columns:auto minmax(150px,1fr) auto!important;
+}
+.footer-stats{
+  text-align:center;
+  font:800 8px ui-monospace,monospace;
+  color:var(--muted)
+}
+.footer-stats .visit-total{color:var(--text)}
+.footer-links{justify-self:end}
+
+/* Fuente de posición real */
+.location-source{
+  color:var(--green);
+  opacity:.65;
+  font-size:6px;
+  margin-left:4px
+}
+
+@media(max-width:980px){
+  #viewActivity .decode-stream{flex-basis:auto;max-height:420px!important}
+  .activity-chat{flex-basis:auto;max-height:300px}
+}
+@media(max-width:700px){
+  .map-mode-toggle button{padding:5px 7px;font-size:6.5px}
+  .activity-chat{min-height:220px;max-height:330px}
+  .footer{display:flex!important}
+}
+
 </style>
 </head>
 <body>
@@ -1510,7 +1656,13 @@ body.has-profile .side-tabs{
 <section class="panel">
   <div class="panel-head">
     <div><div class="panel-title">Radar continental</div></div>
-    <div class="panel-sub" id="utcClock">--:--:-- UTC</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="map-mode-toggle" aria-label="Vista del mapa">
+        <button type="button" id="mapModeMap">MAPA</button>
+        <button type="button" id="mapModeRadar" class="active">RADAR</button>
+      </div>
+      <div class="panel-sub" id="utcClock">--:--:-- UTC</div>
+    </div>
   </div>
 
   <div class="map-wrap">
@@ -1571,6 +1723,30 @@ body.has-profile .side-tabs{
     <div class="decode-stream activity-pane" id="decodeStream">
       <div class="empty">Esperando actividad CW…</div>
     </div>
+    <div class="activity-chat" id="activityChat">
+
+  <div class="chat-top">
+    <div>
+      <div class="chat-strip-title" id="chatStripTitle">CHAT CW LATAM</div>
+      <div class="chat-strip-sub" id="chatStripSub">24 h</div>
+    </div>
+    <div class="chat-model" id="chatModelStats">🤖 CW BOT</div>
+  </div>
+
+  <div class="chat-list" id="chatList">
+    <div class="empty">Todavía no hay mensajes.</div>
+  </div>
+
+  <div class="chat-compose">
+    <div class="chat-input-wrap">
+      <span class="chat-prompt">›</span>
+      <input id="chatInput" maxlength="280" placeholder="Escribí un mensaje para la comunidad…">
+      <span class="chat-count" id="chatCount">0/280</span>
+    </div>
+    <button id="chatSend">ENVIAR</button>
+  </div>
+
+    </div>
   </div>
 
   <div class="side-view" id="viewStats">
@@ -1615,30 +1791,8 @@ body.has-profile .side-tabs{
       <div class="reward-roadmap-grid" id="rewardRoadmapGrid"></div>
     </div>
 
-    <div class="rewards-panel-card" id="rewardsPanelCard">
-      <div class="season-head rewards-head">
-        <div>
-          <div class="season-kicker">TEMPORADA ACTUAL</div>
-          <div class="season-title" id="seasonTitle">—</div>
-        </div>
-        <div class="reward-lock on" id="rewardLock">✓</div>
-      </div>
-
-      <div class="season-progress"><i id="seasonProgressBar"></i></div>
-      <div class="season-meta" id="seasonMeta">—</div>
-      <div class="merit-row" id="meritRow"></div>
-
-      <div class="leaderboard seasonal-board" id="seasonalBoard">
-        <div class="leaderboard-title">RANKING DE LA ESTACIÓN</div>
-        <div id="leaderboardList" class="leaderboard-list">—</div>
-      </div>
-    </div>
-  </div>
-</aside>
-
-</main>
-
-<section class="panel chat-strip">
+    <div cl
+<footer class="footer">n class="panel chat-strip">
   <div class="chat-top">
     <div>
       <div class="chat-strip-title" id="chatStripTitle">CHAT CW LATAM</div>
@@ -1731,7 +1885,7 @@ body.has-profile .side-tabs{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.26-vote-bugfix1";
+const CWLATAM_BUILD="2026.08.26-improvements-bundle1";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -1780,6 +1934,49 @@ Object.assign(stationDB,{
   "VP8":{country:"Atlántico Sur",flag:"🌐",lat:-51.70,lon:-57.85}
 });
 
+const stationLocationCache=new Map();
+
+function positionInfo(call){
+ const c=String(call||"").toUpperCase();
+ const real=stationLocationCache.get(c);
+ if(real && Number.isFinite(Number(real.lat)) && Number.isFinite(Number(real.lon))){
+   const base=prefixInfo(c);
+   return {
+     ...base,
+     lat:Number(real.lat),
+     lon:Number(real.lon),
+     locator:real.locator||"",
+     exact:true
+   };
+ }
+ return {...prefixInfo(c),exact:false,locator:""};
+}
+
+async function loadKnownStationLocations(){
+ try{
+   const {data,error}=await sb.rpc("cw_get_public_station_locations");
+   if(error||!Array.isArray(data))return;
+   stationLocationCache.clear();
+   for(const row of data){
+     const call=String(row.callsign||"").toUpperCase();
+     if(call)stationLocationCache.set(call,row);
+   }
+
+   // Reubica estaciones activas conocidas sin esperar al siguiente spot.
+   for(const [call,visual] of mapByCall){
+     const pos=positionInfo(call);
+     const ll=L.latLng(pos.lat,pos.lon);
+     visual.baseLatLng=ll;
+     visual.anchor.setLatLng(ll);
+     const v=active.get(call);
+     if(v?.lastSpot)visual.label.setIcon(createSpotLabel(v.lastSpot));
+   }
+   layoutMapLabels();
+ }catch(err){
+   console.warn("CW LATAM · locators públicos",err);
+ }
+}
+
 function prefixInfo(call){
  const c=(call||"").toUpperCase();
  const keys=Object.keys(stationDB).sort((a,b)=>b.length-a.length);
@@ -1823,11 +2020,27 @@ function valid(s){
 function ageText(ms){const sec=Math.max(0,Math.floor(ms/1000));return sec<60?sec+"s":Math.floor(sec/60)+"m"}
 
 const map=L.map("map",{zoomControl:true,worldCopyJump:true,minZoom:2}).setView([-18,-58],3);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"© OpenStreetMap"}).addTo(map);
+const osmLayer=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+  maxZoom:18,
+  attribution:"© OpenStreetMap"
+}).addTo(map);
 map.on("zoomend moveend resize",layoutMapLabels);
 
+let mapVisualMode=localStorage.getItem("cwlatam_map_mode")||"radar";
+function applyMapVisualMode(mode){
+  mapVisualMode=mode==="map"?"map":"radar";
+  document.documentElement.setAttribute("data-map-mode",mapVisualMode);
+  document.getElementById("mapModeMap")?.classList.toggle("active",mapVisualMode==="map");
+  document.getElementById("mapModeRadar")?.classList.toggle("active",mapVisualMode==="radar");
+  localStorage.setItem("cwlatam_map_mode",mapVisualMode);
+  setTimeout(()=>map.invalidateSize(),40);
+}
+document.getElementById("mapModeMap")?.addEventListener("click",()=>applyMapVisualMode("map"));
+document.getElementById("mapModeRadar")?.addEventListener("click",()=>applyMapVisualMode("radar"));
+applyMapVisualMode(mapVisualMode);
+
 function createSpotLabel(s){
- const info=prefixInfo(s.dx),latam=isLATAM(s.dx);
+ const info=positionInfo(s.dx),latam=isLATAM(s.dx);
  const channel=s.isChannel;
  const watched=isWatched(s.dx);
  const cls=channel?"channel":(watched?"watch":(latam?"":"dx"));
@@ -1837,8 +2050,9 @@ function createSpotLabel(s){
  const badge=channel
    ? '<span class="channel-badge">7033</span>'
    : (watched?'<span class="watch-badge">ALERTA</span>':"");
+ const precise=info.exact?`<span class="location-source" title="${info.locator}">GRID</span>`:"";
  const html=`<div class="spot-label ${cls}">
-   <div class="c">${info.flag} ${s.dx}${badge}</div>
+   <div class="c">${info.flag} ${s.dx}${badge}${precise}</div>
    <div>${freqLine} · ${s.snr>=0?"+":""}${s.snr} dB</div>
    <div class="m" data-age="${s.ts}">0s</div>
  </div>`;
@@ -1859,7 +2073,7 @@ function animateMissile(from,to,color,latam){
 }
 
 function drawMapSpot(s){
- const spotter=prefixInfo(s.spotter),dx=prefixInfo(s.dx),latam=isLATAM(s.dx),color=latam?"#58ff92":"#ffc85c";
+ const spotter=positionInfo(s.spotter),dx=positionInfo(s.dx),latam=isLATAM(s.dx),color=latam?"#58ff92":"#ffc85c";
  const spPos=[spotter.lat,spotter.lon],dxPos=[dx.lat,dx.lon];
 
  // Cada spot REAL genera la trayectoria desde el receptor hacia quien transmite.
@@ -2283,8 +2497,11 @@ function renderActivity(){
  el.innerHTML=visibleRows.map(([call,v,age,fm,ai])=>{
    const info=prefixInfo(call);
    const opacity=Math.max(0,1-age/ACTIVE_MS);
+   const aiProb=ai?Math.round(Number(ai.probability||0)):0;
+   const aiLevel=aiProb>=70?"high":(aiProb>=45?"mid":"low");
+   const aiWord=aiProb>=70?"ALTA":(aiProb>=45?"POSIBLE":"BAJA");
    const aiBadge=personalMode&&ai
-     ? `<span class="ai-badge">IA ${Math.round(ai.probability)}%</span>`
+     ? `<span class="ai-badge ${aiLevel}" title="Prioridad personalizada de escucha. No oculta señales.">IA ${aiProb}% <span class="ai-word">${aiWord}</span></span>`
      : "";
 
    const watched=isWatched(call);
@@ -2482,10 +2699,18 @@ const I18N={
 function t(k){return (I18N[currentLang]||I18N.es)[k]||k}
 function isWatched(call){return watchlist.has(String(call||"").toUpperCase())}
 function silenceSpotAlert(call){
-  stopCWAlert();
   const c=String(call||"").toUpperCase();
+  alertQueue=alertQueue.filter(x=>x.call!==c);
+  alertLastPlayed.set(c,Date.now());
   alertedChannelCalls.add(c);
   watchAlertedCalls.add(c);
+
+  // Sólo cortamos el audio si la alerta que suena corresponde a este CALL.
+  // Las demás alertas pendientes permanecen en la cola.
+  if(alertPlaying && currentAlertCall===c){
+    stopCWAlert(false);
+    setTimeout(()=>processCWAlertQueue(),ALERT_GAP_MS);
+  }
 }
 window.silenceSpotAlert=silenceSpotAlert;
 function countryFlag(code){
@@ -3351,6 +3576,9 @@ function subscribeChat(){
 }
 
 
+setTimeout(loadKnownStationLocations,1200);
+setInterval(loadKnownStationLocations,5*60*1000);
+
 async function loadCountryStats(){
  try{
    const {data,error}=await sb.rpc("cw_get_country_stats");
@@ -3364,7 +3592,7 @@ async function loadCountryStats(){
    }
 
    const items=countryStatsCache.map(c=>
-     `${countryFlag(c.country_code)} ${c.country_code} · ${c.visitors} visitante${Number(c.visitors)===1?"":"s"}`
+     `${countryFlag(c.country_code)} ${c.country_code}`
    );
 
    // duplicado para que el ticker se vea continuo
@@ -3447,10 +3675,9 @@ async function loadCommunityStats(){
    const {data}=await sb.rpc("cw_get_public_stats");
    if(!data)return;
    communityStatsCache=data;
-   const statsText=currentLang==="pt"
-     ? `${Number(data.unique_visitors||0).toLocaleString()} visitantes · ${data.operators||0} operadores`
-     : `${Number(data.unique_visitors||0).toLocaleString()} visitantes · ${data.operators||0} operadores`;
-   document.getElementById("communityStats").textContent=statsText;
+   const visits=Number(data.visits||0).toLocaleString();
+   document.getElementById("communityStats").innerHTML=
+     `<span class="visit-total">${visits}</span> visitas`;
  }catch{}
 }
 
@@ -3556,26 +3783,26 @@ document.getElementById("langToggle").addEventListener("click",()=>{
  setTimeout(botLiveInsight,1800);
 })();
 
-// ---- ALERTA SONORA DEL CANAL 7033 ------------------------------------------
+// ---- ALERTA CW INTELIGENTE ----------------------------------------------------
 let alertsEnabled = localStorage.getItem("cwlatam_alerts") === "1";
 let restoringHistory=false;
 const alertedChannelCalls = new Set();
+const alertLastPlayed=new Map();
+const ALERT_CALL_COOLDOWN_MS=5*60*1000;
+const ALERT_GAP_MS=4000;
+let alertQueue=[];
+let alertPlaying=false;
+let currentAlertCall="";
+let alertAbortToken=0;
+let audioCtx=null;
 
 function updateAlertButton(){
   const btn=document.getElementById("alertToggle");
   if(!btn)return;
   btn.classList.toggle("enabled",alertsEnabled);
-  btn.setAttribute(
-    "aria-label",
-    alertsEnabled ? "Silenciar alerta CW de 7033" : "Activar alerta CW de 7033"
-  );
-  btn.setAttribute(
-    "title",
-    alertsEnabled ? "Silenciar alerta CW de 7033" : "Activar alerta CW de 7033"
-  );
+  btn.setAttribute("aria-label",alertsEnabled?"Silenciar alertas CW":"Activar alertas CW");
+  btn.setAttribute("title",alertsEnabled?"Silenciar alertas CW":"Activar alertas CW");
 }
-
-let audioCtx=null;
 
 function getAudioContext(){
   if(!audioCtx){
@@ -3589,112 +3816,165 @@ function getAudioContext(){
 function playTone(ctx,start,duration,freq=700){
   const osc=ctx.createOscillator();
   const gain=ctx.createGain();
-
   osc.type="sine";
   osc.frequency.value=freq;
-
-  const attack=0.008;
-  const release=0.012;
-
+  const attack=Math.min(.008,duration*.18);
+  const release=Math.min(.012,duration*.22);
   gain.gain.setValueAtTime(0,start);
-  gain.gain.linearRampToValueAtTime(0.22,start+attack);
-  gain.gain.setValueAtTime(0.22,Math.max(start+attack,start+duration-release));
+  gain.gain.linearRampToValueAtTime(.22,start+attack);
+  gain.gain.setValueAtTime(.22,Math.max(start+attack,start+duration-release));
   gain.gain.linearRampToValueAtTime(0,start+duration);
-
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-
-  osc.start(start);
-  osc.stop(start+duration+0.02);
+  osc.connect(gain);gain.connect(ctx.destination);
+  osc.start(start);osc.stop(start+duration+.02);
 }
 
-function stopCWAlert(){
+const MORSE_ALERT={
+ A:".-",B:"-...",C:"-.-.",D:"-..",E:".",F:"..-.",G:"--.",H:"....",I:"..",
+ J:".---",K:"-.-",L:".-..",M:"--",N:"-.",O:"---",P:".--.",Q:"--.-",R:".-.",
+ S:"...",T:"-",U:"..-",V:"...-",W:".--",X:"-..-",Y:"-.--",Z:"--..",
+ "0":"-----","1":".----","2":"..---","3":"...--","4":"....-",
+ "5":".....","6":"-....","7":"--...","8":"---..","9":"----.",
+ "/":"-..-."
+};
+
+function morseAlertDuration(text,wpm=15){
+ const dit=1.2/wpm;
+ let units=0;
+ const words=String(text).trim().split(/\s+/);
+ words.forEach((word,wi)=>{
+   [...word].forEach((ch,ci)=>{
+     const code=MORSE_ALERT[ch.toUpperCase()]||"";
+     [...code].forEach((sym,si)=>{
+       units+=sym==="."?1:3;
+       if(si<code.length-1)units+=1;
+     });
+     if(ci<word.length-1)units+=3;
+   });
+   if(wi<words.length-1)units+=7;
+ });
+ return units*dit;
+}
+
+function scheduleMorseText(ctx,text,wpm=15){
+ const dit=1.2/wpm;
+ let t=ctx.currentTime+.06;
+ const words=String(text).trim().toUpperCase().split(/\s+/);
+
+ words.forEach((word,wi)=>{
+   [...word].forEach((ch,ci)=>{
+     const code=MORSE_ALERT[ch]||"";
+     [...code].forEach((sym,si)=>{
+       const dur=sym==="."?dit:dit*3;
+       playTone(ctx,t,dur,700);
+       t+=dur;
+       if(si<code.length-1)t+=dit;
+     });
+     if(ci<word.length-1)t+=dit*3;
+   });
+   if(wi<words.length-1)t+=dit*7;
+ });
+ return t;
+}
+
+function stopCWAlert(clearQueue=true){
+  alertAbortToken++;
+  if(clearQueue)alertQueue=[];
+  alertPlaying=false;
+  currentAlertCall="";
   if(audioCtx){
     try{audioCtx.close()}catch{}
     audioCtx=null;
   }
 }
-function playMorseCQAlert(){
-  if(!alertsEnabled)return;
 
-  const ctx=getAudioContext();
-  if(!ctx)return;
+function alertAlreadyQueued(call){
+ return alertQueue.some(x=>x.call===call);
+}
 
-  if(ctx.state==="suspended"){
-    ctx.resume();
-  }
+function queueCWAlert(call,priority=1,reason="watch"){
+ if(!alertsEnabled||restoringHistory)return;
+ const c=String(call||"").toUpperCase();
+ if(!c)return;
 
-  // Aproximadamente 18 WPM.
-  const dit=1.2/18;
-  const dah=dit*3;
-  const intra=dit;
-  const charGap=dit*3;
-  const wordGap=dit*7;
+ const last=Number(alertLastPlayed.get(c)||0);
+ if(Date.now()-last<ALERT_CALL_COOLDOWN_MS)return;
 
-  // C = -.-.   Q = --.-
-  const morse={
-    C:["dah","dit","dah","dit"],
-    Q:["dah","dah","dit","dah"]
-  };
+ const existing=alertQueue.find(x=>x.call===c);
+ if(existing){
+   existing.priority=Math.max(existing.priority,priority);
+   if(reason==="7033")existing.reason="7033";
+   alertQueue.sort((a,b)=>b.priority-a.priority||a.queuedAt-b.queuedAt);
+   return;
+ }
 
-  let t=ctx.currentTime+0.08;
+ alertQueue.push({call:c,priority,reason,queuedAt:Date.now()});
+ alertQueue.sort((a,b)=>b.priority-a.priority||a.queuedAt-b.queuedAt);
+ void processCWAlertQueue();
+}
 
-  function duration(sym){
-    return sym==="dit"?dit:dah;
-  }
+async function processCWAlertQueue(){
+ if(alertPlaying||!alertsEnabled)return;
+ const item=alertQueue.shift();
+ if(!item)return;
 
-  function playChar(ch){
-    const seq=morse[ch];
-    seq.forEach((sym,i)=>{
-      const dur=duration(sym);
-      playTone(ctx,t,dur,700);
-      t+=dur;
-      if(i<seq.length-1)t+=intra;
-    });
-  }
+ alertPlaying=true;
+ currentAlertCall=item.call;
+ const token=++alertAbortToken;
+ const ctx=getAudioContext();
+ if(!ctx){alertPlaying=false;return}
 
-  function playCQ(){
-    playChar("C");
-    t+=charGap;
-    playChar("Q");
-  }
+ try{
+   if(ctx.state==="suspended")await ctx.resume();
+   const text=`CQ CQ CQ DE ${item.call}`;
+   scheduleMorseText(ctx,text,15);
+   alertLastPlayed.set(item.call,Date.now());
 
-  // CQ CQ CQ, repetido tres veces.
-  for(let group=0;group<3;group++){
-    for(let i=0;i<3;i++){
-      playCQ();
-      if(i<2)t+=wordGap;
-    }
-    if(group<2)t+=wordGap*1.6;
-  }
+   const ms=Math.ceil((morseAlertDuration(text,15)+.2)*1000);
+   await new Promise(resolve=>setTimeout(resolve,ms));
+ }catch(err){
+   console.warn("CW LATAM · alerta CW",err);
+ }
+
+ if(token!==alertAbortToken)return;
+ alertPlaying=false;
+ currentAlertCall="";
+ await new Promise(resolve=>setTimeout(resolve,ALERT_GAP_MS));
+ if(token!==alertAbortToken)return;
+ void processCWAlertQueue();
 }
 
 function maybeAlertChannel(s){
   if(restoringHistory)return;
 
-  const channelAlert=s.isChannel && !alertedChannelCalls.has(s.dx);
-  const personalAlert=isWatched(s.dx) && currentProfile && !watchAlertedCalls.has(s.dx);
+  const c=String(s.dx||"").toUpperCase();
+  const elapsed=Date.now()-Number(alertLastPlayed.get(c)||0);
+  const eligible=elapsed>=ALERT_CALL_COOLDOWN_MS && !alertAlreadyQueued(c) && currentAlertCall!==c;
+  const channelAlert=s.isChannel && eligible;
+  const personalAlert=isWatched(c) && currentProfile && eligible;
 
+  // Misma estación en 7033 + watchlist = UNA sola alerta, con prioridad 7033.
   if(channelAlert){
-    alertedChannelCalls.add(s.dx);
-    playMorseCQAlert();
+    alertedChannelCalls.add(c);
+    watchAlertedCalls.add(c);
+    queueCWAlert(c,2,"7033");
+    return;
   }
 
   if(personalAlert){
-    watchAlertedCalls.add(s.dx);
-    if(!channelAlert)playMorseCQAlert();
+    watchAlertedCalls.add(c);
+    queueCWAlert(c,1,"watch");
   }
 }
 
 document.getElementById("alertToggle").addEventListener("click",()=>{
   alertsEnabled=!alertsEnabled;
-  localStorage.setItem("cwlatam_alerts", alertsEnabled ? "1" : "0");
+  localStorage.setItem("cwlatam_alerts",alertsEnabled?"1":"0");
   updateAlertButton();
 
-  // Esta interacción del usuario desbloquea Web Audio en navegadores que lo requieren.
   if(alertsEnabled){
     const ctx=getAudioContext();
-    if(ctx && ctx.state==="suspended")ctx.resume();
+    if(ctx&&ctx.state==="suspended")ctx.resume();
+    void processCWAlertQueue();
   }else{
     stopCWAlert();
   }
