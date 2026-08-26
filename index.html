@@ -1603,6 +1603,695 @@ html[data-map-mode="radar"] .radar-sweep{display:block}
   .footer{display:flex!important}
 }
 
+
+/* ===== RIGHT PANEL ALIGNMENT FIX =====
+   El panel derecho termina exactamente a la altura del dial izquierdo.
+   El chat vive dentro de ACTIVIDAD y no se superpone. */
+.grid{
+  align-items:stretch!important;
+}
+.grid > .panel:first-child,
+.grid > .live-decode{
+  height:100%!important;
+}
+.live-decode{
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  align-self:stretch!important;
+}
+#viewActivity{
+  display:none;
+  flex-direction:column;
+  min-height:0;
+  flex:1;
+  overflow:hidden;
+}
+#viewActivity.active{
+  display:flex!important;
+}
+#viewActivity .decode-stream{
+  flex:1 1 auto!important;
+  min-height:150px;
+  overflow:auto!important;
+}
+.activity-chat{
+  flex:0 0 235px!important;
+  min-height:205px!important;
+  max-height:235px!important;
+  overflow:hidden;
+  position:relative;
+  z-index:1;
+}
+.activity-chat .chat-list{
+  min-height:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+}
+@media(max-width:980px){
+  .grid > .panel:first-child,
+  .grid > .live-decode{
+    height:auto!important;
+  }
+  .live-decode{
+    min-height:0!important;
+  }
+  #viewActivity .decode-stream{
+    max-height:420px!important;
+  }
+  .activity-chat{
+    flex-basis:auto!important;
+    min-height:220px!important;
+    max-height:320px!important;
+  }
+}
+
+
+/* ===== FOOTER PRO · STATS + FLAGS ===== */
+.footer.footer-pro{
+  display:flex!important;
+  flex-direction:column;
+  gap:6px;
+  min-height:58px;
+  padding:8px 6px 5px!important;
+  border-top:1px solid rgba(88,255,146,.08);
+}
+.footer-topline{
+  display:grid;
+  grid-template-columns:auto minmax(420px,1fr) auto;
+  align-items:center;
+  gap:14px;
+}
+.footer-brand{
+  color:var(--muted);
+  font-size:7.5px;
+  letter-spacing:.055em;
+}
+.footer-radio{
+  width:7px;height:7px;border-radius:50%;
+  display:inline-block;font-size:0;
+  background:var(--green);
+  box-shadow:0 0 10px rgba(88,255,146,.52)
+}
+.footer-metrics{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(90px,1fr));
+  gap:6px;
+  min-width:0;
+}
+.footer-metric{
+  min-width:0;height:30px;
+  display:grid;grid-template-columns:auto auto 1fr;
+  align-items:center;gap:5px;padding:0 8px;
+  border:1px solid rgba(88,255,146,.10);
+  border-radius:999px;
+  background:linear-gradient(180deg,rgba(88,255,146,.025),rgba(255,255,255,.005));
+  white-space:nowrap;
+}
+.footer-metric-icon{color:var(--green);font:900 8px ui-monospace,monospace;opacity:.72}
+.footer-metric-value{color:var(--text);font:900 9px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.footer-metric-label{
+  overflow:hidden;text-overflow:ellipsis;color:var(--muted);
+  font:800 6.5px ui-sans-serif,system-ui;letter-spacing:.08em
+}
+.footer-links{justify-self:end;font-size:7.5px}
+.footer-flags{
+  width:100%;height:18px;display:flex;align-items:center;overflow:hidden;
+  mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)
+}
+.footer-flags .country-roll-track{
+  display:inline-block;padding-left:100%;white-space:nowrap;
+  font-size:14px;line-height:18px;letter-spacing:.18em;
+  animation:countryTicker 32s linear infinite
+}
+html[data-theme="light"] .footer-metric{
+  background:linear-gradient(180deg,rgba(8,125,62,.035),rgba(255,255,255,.3));
+  border-color:rgba(8,125,62,.12)
+}
+@media(max-width:980px){
+  .footer-topline{grid-template-columns:1fr auto}
+  .footer-metrics{grid-column:1/-1;grid-row:2}
+  .footer-flags{display:flex!important}
+}
+@media(max-width:700px){
+  .footer.footer-pro{display:flex!important;gap:7px;padding:8px 4px 6px!important}
+  .footer-topline{display:flex;flex-wrap:wrap;justify-content:center;gap:7px 10px}
+  .footer-brand,.footer-links{justify-content:center}
+  .footer-metrics{flex:1 0 100%;width:100%;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+  .footer-metric{height:29px;border-radius:9px}
+  .footer-flags{flex:1 0 100%;width:100%}
+  .footer-flags .country-roll-track{font-size:13px}
+}
+
+
+/* ===== FOOTER PRO 1.1 · LEFT / CENTER / RIGHT ===== */
+.footer.footer-pro{
+  gap:5px!important;
+  padding:8px 5px 5px!important;
+}
+.footer-topline{
+  display:grid!important;
+  grid-template-columns:minmax(230px,1fr) auto minmax(190px,1fr)!important;
+  align-items:center!important;
+  gap:14px!important;
+}
+.footer-brand{
+  justify-self:start!important;
+  min-width:0;
+  font-size:7.5px!important;
+  color:var(--muted)!important;
+  letter-spacing:.055em;
+}
+.footer-brand span:last-child{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.footer-metrics{
+  justify-self:center!important;
+  width:auto!important;
+  grid-template-columns:repeat(4,auto)!important;
+  gap:7px!important;
+}
+.footer-metric{
+  min-width:108px!important;
+  height:31px!important;
+  grid-template-columns:auto auto!important;
+  grid-template-rows:auto auto!important;
+  column-gap:6px!important;
+  row-gap:0!important;
+  justify-content:center!important;
+  align-content:center!important;
+  padding:3px 10px!important;
+  border-radius:11px!important;
+}
+.footer-metric-icon{
+  grid-row:1/3;
+  align-self:center;
+  font-family:system-ui,"Apple Color Emoji","Segoe UI Emoji",sans-serif!important;
+  font-size:12px!important;
+  line-height:1!important;
+  opacity:.9!important;
+}
+.footer-metric-value{
+  grid-column:2;
+  grid-row:1;
+  font-size:9px!important;
+  line-height:1.05!important;
+  text-align:left;
+}
+.footer-metric-label{
+  grid-column:2;
+  grid-row:2;
+  font-size:6px!important;
+  line-height:1.05!important;
+  text-align:left;
+  letter-spacing:.07em!important;
+}
+.footer-links{
+  justify-self:end!important;
+  font-size:7.5px!important;
+  gap:12px!important;
+}
+.footer-links a:first-child::before{content:"📘 ";font-family:system-ui,"Apple Color Emoji","Segoe UI Emoji",sans-serif}
+.footer-links a:last-child::before{content:"👤 ";font-family:system-ui,"Apple Color Emoji","Segoe UI Emoji",sans-serif}
+.footer-flags{
+  margin-top:1px;
+  height:17px!important;
+}
+.footer-flags .country-roll-track{
+  font-family:system-ui,"Apple Color Emoji","Segoe UI Emoji",sans-serif;
+  font-size:13px!important;
+  line-height:17px!important;
+  animation-duration:34s!important;
+}
+@media(max-width:1150px){
+  .footer-topline{
+    grid-template-columns:auto 1fr auto!important;
+  }
+  .footer-metric{min-width:96px!important;padding-left:8px!important;padding-right:8px!important}
+}
+@media(max-width:900px){
+  .footer-topline{
+    display:flex!important;
+    flex-wrap:wrap!important;
+    justify-content:space-between!important;
+  }
+  .footer-brand{order:1}
+  .footer-links{order:2}
+  .footer-metrics{
+    order:3;
+    flex:1 0 100%;
+    width:100%!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  }
+  .footer-metric{min-width:0!important}
+}
+@media(max-width:600px){
+  .footer-brand,.footer-links{
+    flex:1 0 100%;
+    justify-content:center!important;
+    text-align:center;
+  }
+  .footer-metrics{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
+
+
+/* ===== MAP · MI ESTACIÓN ===== */
+.my-station-map-btn{
+  display:none;
+  position:absolute;
+  left:14px;
+  top:190px;
+  z-index:501;
+  height:31px;
+  align-items:center;
+  gap:6px;
+  padding:0 10px;
+  border:1px solid rgba(88,255,146,.22);
+  border-radius:9px;
+  background:rgba(4,13,8,.88);
+  backdrop-filter:blur(8px);
+  color:#9fc8ab;
+  font:900 7px ui-sans-serif,system-ui;
+  letter-spacing:.075em;
+  cursor:pointer;
+  box-shadow:0 7px 20px rgba(0,0,0,.13);
+  transition:transform .16s,border-color .16s,color .16s,background .16s;
+}
+body.has-profile .my-station-map-btn{display:inline-flex}
+.my-station-map-btn:hover{
+  transform:translateY(-1px);
+  color:var(--green);
+  border-color:rgba(88,255,146,.42);
+  background:rgba(8,28,17,.92)
+}
+.my-station-map-btn:active{transform:translateY(0)}
+.my-station-map-btn.locating{
+  color:var(--green);
+  border-color:rgba(88,255,146,.48);
+  box-shadow:0 0 18px rgba(88,255,146,.10)
+}
+html[data-theme="light"] .my-station-map-btn{
+  background:rgba(248,251,249,.91);
+  color:#496c56;
+  border-color:rgba(8,125,62,.18)
+}
+html[data-theme="light"] .my-station-map-btn:hover{
+  color:var(--green);
+  background:#fff;
+}
+@media(max-width:700px){
+  .my-station-map-btn{
+    left:8px;
+    top:137px;
+    height:29px;
+    padding:0 8px;
+    font-size:6.5px;
+  }
+  body.has-profile .focus-note{top:174px!important}
+}
+
+
+/* ===== FOOTER PRO 1.2 · CLEAN TEXT ===== */
+.footer.footer-pro{
+  gap:6px!important;
+  padding:8px 4px 5px!important;
+}
+
+.footer-topline{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:18px!important;
+}
+
+/* Métricas centradas como bloque principal */
+.footer-metrics{
+  grid-column:1;
+  justify-self:center!important;
+  width:auto!important;
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(112px,auto))!important;
+  gap:7px!important;
+}
+
+/* Textos institucionales agrupados, limpios, a la derecha */
+.footer-brand{
+  grid-column:2;
+  grid-row:1;
+  justify-self:end!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:0!important;
+  color:var(--muted)!important;
+  font-size:7px!important;
+  letter-spacing:.06em!important;
+  white-space:nowrap!important;
+}
+
+.footer-radio{display:none!important}
+
+.footer-links{
+  grid-column:2;
+  grid-row:1;
+  justify-self:end!important;
+  align-self:end!important;
+  display:flex!important;
+  gap:12px!important;
+  margin-top:17px!important;
+  font-size:7px!important;
+  white-space:nowrap!important;
+}
+
+.footer-links a{
+  color:var(--muted)!important;
+  text-decoration:none!important;
+  font-weight:800!important;
+  letter-spacing:.05em!important;
+  transition:color .15s,opacity .15s;
+}
+.footer-links a:hover{
+  color:var(--green)!important;
+  text-decoration:none!important;
+}
+
+/* eliminar adornos/emojis heredados */
+.footer-links a::before{content:none!important}
+
+/* métricas siguen siendo la parte visual */
+.footer-metric{
+  min-width:112px!important;
+  height:31px!important;
+  border-radius:11px!important;
+}
+.footer-metric-icon{
+  font-size:11px!important;
+  opacity:.8!important;
+}
+
+/* banderas como franja inferior discreta */
+.footer-flags{
+  grid-column:1/-1;
+  width:100%;
+  height:17px!important;
+  margin-top:0!important;
+}
+.footer-flags .country-roll-track{
+  font-size:13px!important;
+  line-height:17px!important;
+  opacity:.9;
+}
+
+/* desktop medio */
+@media(max-width:1150px){
+  .footer-topline{
+    grid-template-columns:1fr!important;
+    gap:7px!important;
+  }
+  .footer-metrics{
+    grid-column:1!important;
+    grid-row:1!important;
+    justify-self:center!important;
+    width:100%!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  }
+  .footer-brand{
+    grid-column:1!important;
+    grid-row:2!important;
+    justify-self:center!important;
+  }
+  .footer-links{
+    grid-column:1!important;
+    grid-row:3!important;
+    justify-self:center!important;
+    align-self:auto!important;
+    margin-top:0!important;
+  }
+}
+
+@media(max-width:700px){
+  .footer-metrics{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  .footer-brand,
+  .footer-links{
+    width:100%;
+    justify-content:center!important;
+    text-align:center!important;
+    white-space:normal!important;
+  }
+}
+
+
+/* ===== LAYOUT BALANCE + ACTIVITY/CHAT 2 ===== */
+.grid{
+  align-items:start!important;
+}
+.grid > section.panel{
+  height:auto!important;
+  align-self:start!important;
+}
+.grid > .live-decode{
+  align-self:start!important;
+  min-height:0!important;
+  max-height:none!important;
+}
+
+#viewActivity{
+  min-height:0!important;
+  overflow:hidden!important;
+}
+#viewActivity.active{
+  display:flex!important;
+  flex-direction:column!important;
+}
+#viewActivity .decode-stream{
+  flex:1 1 58%!important;
+  min-height:230px!important;
+  max-height:none!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  scrollbar-width:none!important;
+  -ms-overflow-style:none!important;
+  overscroll-behavior:contain;
+}
+#viewActivity .decode-stream::-webkit-scrollbar{
+  display:none!important;
+  width:0!important;
+  height:0!important;
+}
+.activity-chat{
+  flex:0 0 38%!important;
+  min-height:245px!important;
+  max-height:none!important;
+  overflow:hidden!important;
+  border-top:1px solid var(--line)!important;
+}
+.activity-chat .chat-list{
+  flex:1!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  scrollbar-width:none!important;
+}
+.activity-chat .chat-list::-webkit-scrollbar{
+  display:none!important;
+  width:0!important;
+}
+
+/* ===== FOOTER MINIMAL 2 ===== */
+.footer.footer-pro.footer-minimal{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:5px!important;
+  min-height:54px!important;
+  padding:7px 4px 4px!important;
+  border-top:1px solid rgba(88,255,146,.08);
+}
+.footer-main{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:18px;
+}
+.footer-metrics{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:20px!important;
+  width:auto!important;
+  min-width:0;
+  overflow:hidden;
+}
+.footer-stat{
+  display:inline-flex;
+  align-items:baseline;
+  gap:5px;
+  white-space:nowrap;
+  color:var(--muted);
+  background:none!important;
+  border:0!important;
+  padding:0!important;
+  min-width:0!important;
+  height:auto!important;
+  border-radius:0!important;
+}
+.footer-stat-icon{
+  font-family:system-ui,"Apple Color Emoji","Segoe UI Emoji",sans-serif;
+  font-size:11px;
+  line-height:1;
+  opacity:.82;
+}
+.footer-stat strong{
+  color:var(--text);
+  font:900 9px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.footer-stat span:last-child{
+  color:var(--muted);
+  font:800 6.5px ui-sans-serif,system-ui;
+  letter-spacing:.07em;
+}
+.footer-meta{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:7px;
+  white-space:nowrap;
+  color:var(--muted);
+  font:800 6.8px ui-sans-serif,system-ui;
+  letter-spacing:.055em;
+}
+.footer-meta a{
+  color:var(--muted)!important;
+  text-decoration:none!important;
+  font-weight:900!important;
+}
+.footer-meta a:hover{color:var(--green)!important}
+.footer-open{opacity:.72}
+.footer-sep{opacity:.28}
+.footer-flags{
+  width:100%!important;
+  height:17px!important;
+  overflow:hidden!important;
+  mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);
+}
+.footer-flags .country-roll-track{
+  display:inline-block;
+  padding-left:100%;
+  white-space:nowrap;
+  font-family:system-ui,"Apple Color Emoji","Segoe UI Emoji",sans-serif;
+  font-size:13px!important;
+  line-height:17px!important;
+  letter-spacing:.16em;
+  animation:countryTicker 34s linear infinite!important;
+}
+
+@media(max-width:1100px){
+  .footer-main{grid-template-columns:1fr}
+  .footer-metrics{justify-content:center!important;flex-wrap:wrap;gap:8px 17px!important}
+  .footer-meta{justify-content:center}
+}
+@media(max-width:980px){
+  .grid > .live-decode{
+    height:auto!important;
+  }
+  #viewActivity .decode-stream{
+    min-height:280px!important;
+    max-height:430px!important;
+  }
+  .activity-chat{
+    flex-basis:auto!important;
+    min-height:260px!important;
+    max-height:340px!important;
+  }
+}
+@media(max-width:700px){
+  .footer-metrics{
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    width:100%!important;
+    gap:7px 8px!important;
+  }
+  .footer-stat{justify-content:center}
+  .footer-meta{flex-wrap:wrap;gap:5px 7px;text-align:center}
+}
+
+
+/* ===== PROPAGACIÓN 40 m ===== */
+.prop-badge{
+  position:absolute;
+  right:14px;
+  top:92px;
+  z-index:502;
+  min-width:205px;
+  max-width:250px;
+  padding:9px 11px 8px;
+  border:1px solid rgba(88,255,146,.22);
+  border-radius:11px;
+  background:rgba(4,13,8,.88);
+  backdrop-filter:blur(9px);
+  box-shadow:0 12px 30px rgba(0,0,0,.16);
+  color:var(--text);
+  pointer-events:none;
+}
+.prop-top{display:flex;align-items:center;gap:6px}
+.prop-dot{
+  width:7px;height:7px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 10px currentColor;flex:0 0 auto
+}
+.prop-top strong{
+  font:900 10px ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.05em
+}
+.prop-state{
+  margin-left:auto;
+  font:900 7px ui-sans-serif,system-ui;
+  letter-spacing:.09em;
+  color:var(--green)
+}
+.prop-badge[data-state="excellent"] .prop-dot,
+.prop-badge[data-state="excellent"] .prop-state{color:#65ff9e;background:#65ff9e}
+.prop-badge[data-state="good"] .prop-dot{background:#58ff92}
+.prop-badge[data-state="good"] .prop-state{color:#58ff92}
+.prop-badge[data-state="fair"] .prop-dot{background:#ffd36b}
+.prop-badge[data-state="fair"] .prop-state{color:#ffd36b}
+.prop-badge[data-state="poor"] .prop-dot{background:#ff7777}
+.prop-badge[data-state="poor"] .prop-state{color:#ff7777}
+.prop-row{
+  display:flex;gap:9px;margin-top:6px;color:var(--muted);
+  font:800 7px ui-monospace,SFMono-Regular,Menlo,monospace
+}
+.prop-window{
+  margin-top:5px;padding-top:5px;border-top:1px solid rgba(88,255,146,.09);
+  color:var(--muted);font:800 7px ui-sans-serif,system-ui;letter-spacing:.05em
+}
+.prop-window b{color:var(--text);margin-left:4px}
+.prop-source{
+  margin-top:3px;color:var(--muted);opacity:.5;
+  font:700 6px ui-sans-serif,system-ui;letter-spacing:.04em
+}
+html[data-theme="light"] .prop-badge{
+  background:rgba(248,251,249,.93);
+  border-color:rgba(8,125,62,.18)
+}
+@media(max-width:700px){
+  .prop-badge{
+    right:8px;
+    top:94px;
+    min-width:172px;
+    max-width:190px;
+    padding:7px 8px;
+  }
+  .prop-top strong{font-size:8px}
+  .prop-state{font-size:6px}
+  .prop-row{font-size:6px;gap:6px}
+  .prop-window{font-size:6px}
+}
+
 </style>
 </head>
 <body>
@@ -1660,6 +2349,7 @@ html[data-map-mode="radar"] .radar-sweep{display:block}
       <div class="map-mode-toggle" aria-label="Vista del mapa">
         <button type="button" id="mapModeMap">MAPA</button>
         <button type="button" id="mapModeRadar" class="active">RADAR</button>
+        
       </div>
       <div class="panel-sub" id="utcClock">--:--:-- UTC</div>
     </div>
@@ -1672,11 +2362,35 @@ html[data-map-mode="radar"] .radar-sweep{display:block}
 
     <div class="map-badge"><b>● RADAR CW</b><br><span id="mapStatus">Esperando actividad…</span></div>
 
+    <div class="prop-badge" id="propBadge" title="Condición estimada de propagación en 40 metros para Sudamérica">
+      <div class="prop-top">
+        <span class="prop-dot"></span>
+        <strong>40 m</strong>
+        <span class="prop-state" id="propState">CALCULANDO</span>
+      </div>
+      <div class="prop-row">
+        <span id="propKp">Kp —</span>
+        <span id="propSfi">SFI —</span>
+        <span id="propActivity">0 señales</span>
+      </div>
+      <div class="prop-window"><span>MEJOR HORARIO</span> <b id="propBestWindow">—</b></div>
+      <div class="prop-source" id="propSource">Radar CW LATAM</div>
+    </div>
+
     <div class="map-focus-toggle">
       <button type="button" id="globalBtn" class="active">REGIÓN</button>
       <button type="button" id="focusBtn">FOCO 1500 KM</button>
       <button type="button" id="myFocusBtn">MI FOCO IA</button>
     </div>
+
+    <button type="button"
+            class="my-station-map-btn"
+            id="myStationMapBtn"
+            title="Centrar el mapa en mi locator"
+            aria-label="Centrar mapa en mi estación">
+      🎯 <span>MI ESTACIÓN</span>
+    </button>
+
     <div class="focus-cross" id="focusCross"></div>
     <div class="focus-note" id="focusNote">FOCO: prioriza receptores dentro de 1500 km del centro del mapa</div>
     <div class="legend">
@@ -1723,9 +2437,9 @@ html[data-map-mode="radar"] .radar-sweep{display:block}
     <div class="decode-stream activity-pane" id="decodeStream">
       <div class="empty">Esperando actividad CW…</div>
     </div>
-    <div class="activity-chat" id="activityChat">
 
-  <div class="chat-top">
+    <div class="activity-chat" id="activityChat">
+<div class="chat-top">
     <div>
       <div class="chat-strip-title" id="chatStripTitle">CHAT CW LATAM</div>
       <div class="chat-strip-sub" id="chatStripSub">24 h</div>
@@ -1745,7 +2459,6 @@ html[data-map-mode="radar"] .radar-sweep{display:block}
     </div>
     <button id="chatSend">ENVIAR</button>
   </div>
-
     </div>
   </div>
 
@@ -1791,45 +2504,51 @@ html[data-map-mode="radar"] .radar-sweep{display:block}
       <div class="reward-roadmap-grid" id="rewardRoadmapGrid"></div>
     </div>
 
-    <div cl
-<footer class="footer">n class="panel chat-strip">
-  <div class="chat-top">
-    <div>
-      <div class="chat-strip-title" id="chatStripTitle">CHAT CW LATAM</div>
-      <div class="chat-strip-sub" id="chatStripSub">24 h</div>
+    <div class="rewards-panel-card" id="rewardsPanelCard">
+      <div class="season-head rewards-head">
+        <div>
+          <div class="season-kicker">TEMPORADA ACTUAL</div>
+          <div class="season-title" id="seasonTitle">—</div>
+        </div>
+        <div class="reward-lock on" id="rewardLock">✓</div>
+      </div>
+
+      <div class="season-progress"><i id="seasonProgressBar"></i></div>
+      <div class="season-meta" id="seasonMeta">—</div>
+      <div class="merit-row" id="meritRow"></div>
+
+      <div class="leaderboard seasonal-board" id="seasonalBoard">
+        <div class="leaderboard-title">RANKING DE LA ESTACIÓN</div>
+        <div id="leaderboardList" class="leaderboard-list">—</div>
+      </div>
     </div>
-    <div class="chat-model" id="chatModelStats">🤖 CW BOT</div>
   </div>
+</aside>
 
-  <div class="chat-list" id="chatList">
-    <div class="empty">Todavía no hay mensajes.</div>
-  </div>
+</main>
 
-  <div class="chat-compose">
-    <div class="chat-input-wrap">
-      <span class="chat-prompt">›</span>
-      <input id="chatInput" maxlength="280" placeholder="Escribí un mensaje para la comunidad…">
-      <span class="chat-count" id="chatCount">0/280</span>
+<footer class="footer footer-pro footer-minimal">
+  <div class="footer-main">
+    <div class="footer-metrics" id="communityStats">
+      <div class="footer-stat"><span class="footer-stat-icon">👥</span><strong id="footerOperators">—</strong><span id="footerOperatorsLabel">OPERADORES</span></div>
+      <div class="footer-stat"><span class="footer-stat-icon">📡</span><strong id="footerReports">—</strong><span id="footerReportsLabel">REPORTES</span></div>
+      <div class="footer-stat"><span class="footer-stat-icon">⏱</span><strong id="footerUsage">—</strong><span id="footerUsageLabel">HORAS DE USO</span></div>
+      <div class="footer-stat"><span class="footer-stat-icon">🌎</span><strong id="footerCountries">—</strong><span id="footerCountriesLabel">PAÍSES</span></div>
+      <div class="footer-stat"><span class="footer-stat-icon">📶</span><strong id="footerActive">—</strong><span id="footerActiveLabel">SEÑALES AHORA</span></div>
+      <div class="footer-stat"><span class="footer-stat-icon">◎</span><strong id="footerVisitors">—</strong><span id="footerVisitorsLabel">VISITANTES</span></div>
     </div>
-    <button id="chatSend">ENVIAR</button>
-  </div>
-</section>
 
-<footer class="footer">
-  <div class="footer-brand">
-    <span class="footer-radio">◉</span>
-    <span>GRATIS · SIN ANUNCIOS · OPEN SOURCE</span>
-  </div>
-
-  <div class="country-roll" id="countryRoll">
-    <span class="country-roll-track" id="countryRollTrack">🌎 LATAM</span>
+    <div class="footer-meta">
+      <span class="footer-open">GRATIS · SIN ANUNCIOS · OPEN SOURCE</span>
+      <span class="footer-sep">·</span>
+      <a href="https://github.com/ZP5DXS/CW-LATAM#readme" target="_blank" rel="noopener noreferrer">INSTRUCCIONES</a>
+      <span class="footer-sep">·</span>
+      <a href="https://www.facebook.com/zp5dxs" target="_blank" rel="noopener noreferrer">ZP5DXS</a>
+    </div>
   </div>
 
-  <div class="footer-stats" id="communityStats">—</div>
-
-  <div class="footer-links">
-    <a href="https://github.com/ZP5DXS/CW-LATAM#readme" target="_blank" rel="noopener noreferrer">ⓘ INSTRUCCIONES</a>
-    <a href="https://www.facebook.com/zp5dxs" target="_blank" rel="noopener noreferrer">ZP5DXS ↗</a>
+  <div class="country-roll footer-flags" id="countryRoll" aria-label="Países visitantes">
+    <span class="country-roll-track" id="countryRollTrack">🌎</span>
   </div>
 </footer>
 </div>
@@ -1885,7 +2604,7 @@ html[data-map-mode="radar"] .radar-sweep{display:block}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.26-improvements-bundle1";
+const CWLATAM_BUILD="2026.08.26-propagation-stable1.1";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -1977,14 +2696,474 @@ async function loadKnownStationLocations(){
  }
 }
 
+// ===== GEO FALLBACK · SOUTH AMERICA ==========================================
+// Prioridad:
+//   1) Locator real registrado en CW LATAM (positionInfo)
+//   2) Región/zona deducible oficialmente del indicativo
+//   3) Centro nacional aproximado
+//
+// El objetivo no es fingir un QTH exacto: es evitar errores grandes de mapa y
+// mejorar el cálculo de FOCO 1500 KM cuando todavía no tenemos locator real.
+
+function geoTinyJitter(str,scale){
+ const h=[...String(str||"")].reduce((a,ch)=>((a*33)+ch.charCodeAt(0))>>>0,5381);
+ return (((h%1000)/999)-.5)*scale;
+}
+
+function regionalPoint(country,flag,region,lat,lon,call,scaleLat=.18,scaleLon=.24){
+ return {
+   country,flag,region,
+   lat:lat+geoTinyJitter(call,scaleLat),
+   lon:lon+geoTinyJitter([...String(call||"")].reverse().join(""),scaleLon),
+   regional:true
+ };
+}
+
+// -----------------------------------------------------------------------------
+// ARGENTINA · LU/LW/AY/AZ
+// Primera letra del sufijo = división geográfica.
+// -----------------------------------------------------------------------------
+const ARGENTINA_CALL_AREAS={
+ A:{name:"CABA",lat:-34.6037,lon:-58.3816},
+ B:{name:"CABA",lat:-34.6037,lon:-58.3816},
+ C:{name:"CABA",lat:-34.6037,lon:-58.3816},
+ D:{name:"Buenos Aires",lat:-34.9214,lon:-57.9544},
+ E:{name:"Buenos Aires",lat:-34.9214,lon:-57.9544},
+ F:{name:"Santa Fe",lat:-32.55,lon:-60.78},
+ H:{name:"Córdoba",lat:-31.4201,lon:-64.1888},
+ I:{name:"Misiones",lat:-27.3621,lon:-55.9009},
+ J:{name:"Entre Ríos",lat:-31.7413,lon:-60.5115},
+ K:{name:"Tucumán",lat:-26.8083,lon:-65.2176},
+ L:{name:"Corrientes",lat:-27.4692,lon:-58.8306},
+ M:{name:"Mendoza",lat:-32.8895,lon:-68.8458},
+ N:{name:"Santiago del Estero",lat:-27.7834,lon:-64.2642},
+ O:{name:"Salta",lat:-24.7821,lon:-65.4232},
+ P:{name:"San Juan",lat:-31.5375,lon:-68.5364},
+ Q:{name:"San Luis",lat:-33.3017,lon:-66.3378},
+ R:{name:"Catamarca",lat:-28.4696,lon:-65.7852},
+ S:{name:"La Rioja",lat:-29.4131,lon:-66.8558},
+ T:{name:"Jujuy",lat:-24.1858,lon:-65.2995},
+ U:{name:"La Pampa",lat:-36.6203,lon:-64.2906},
+ V:{name:"Río Negro",lat:-40.8135,lon:-62.9967},
+ W:{name:"Chubut",lat:-43.3002,lon:-65.1023},
+ Y:{name:"Neuquén",lat:-38.9516,lon:-68.0591},
+ Z:{name:"Antártida / Islas",lat:-54.80,lon:-68.30}
+};
+
+function argentinaCallArea(call){
+ const c=String(call||"").toUpperCase().replace(/[^A-Z0-9/]/g,"");
+ const m=c.match(/^(AY|AZ|LU|LW)([0-9])([A-Z]{1,3})/);
+ if(!m)return null;
+ const suffix=m[3];
+
+ if(suffix[0]==="G"){
+   const second=suffix[1]||"A";
+   return second>="P"
+     ? regionalPoint("Argentina","🇦🇷","Formosa",-26.1775,-58.1781,c)
+     : regionalPoint("Argentina","🇦🇷","Chaco",-27.4514,-58.9867,c);
+ }
+ if(suffix[0]==="X"){
+   const second=suffix[1]||"A";
+   return second>="P"
+     ? regionalPoint("Argentina","🇦🇷","Tierra del Fuego",-54.8019,-68.3030,c)
+     : regionalPoint("Argentina","🇦🇷","Santa Cruz",-51.6230,-69.2168,c);
+ }
+
+ const a=ARGENTINA_CALL_AREAS[suffix[0]];
+ return a ? regionalPoint("Argentina","🇦🇷",a.name,a.lat,a.lon,c) : null;
+}
+
+// -----------------------------------------------------------------------------
+// BRASIL · prefijo+número (y PU por rango de sufijo cuando hace falta)
+// Basado en tabla oficial ANATEL de Unidades da Federação.
+// -----------------------------------------------------------------------------
+const BRAZIL_DIRECT={
+ "PT8":["Acre",-9.9754,-67.8249],
+ "PP7":["Alagoas",-9.6658,-35.7350],
+ "PQ8":["Amapá",0.0349,-51.0694],
+ "PP8":["Amazonas",-3.1190,-60.0217],
+ "PY6":["Bahia",-12.9714,-38.5014],
+ "PT7":["Ceará",-3.7319,-38.5267],
+ "PT2":["Distrito Federal",-15.7939,-47.8828],
+ "PP1":["Espírito Santo",-20.3155,-40.3128],
+ "PP2":["Goiás",-16.6869,-49.2648],
+ "PR8":["Maranhão",-2.5307,-44.3068],
+ "PY9":["Mato Grosso",-15.6014,-56.0979],
+ "PT9":["Mato Grosso do Sul",-20.4697,-54.6201],
+ "PY4":["Minas Gerais",-19.9167,-43.9345],
+ "PR7":["Paraíba",-7.1195,-34.8450],
+ "PY5":["Paraná",-25.4284,-49.2733],
+ "PY8":["Pará",-1.4558,-48.4902],
+ "PY7":["Pernambuco",-8.0476,-34.8770],
+ "PS8":["Piauí",-5.0892,-42.8019],
+ "PY1":["Rio de Janeiro",-22.9068,-43.1729],
+ "PS7":["Rio Grande do Norte",-5.7793,-35.2009],
+ "PY3":["Rio Grande do Sul",-30.0346,-51.2177],
+ "PW8":["Rondônia",-8.7608,-63.8999],
+ "PV8":["Roraima",2.8235,-60.6758],
+ "PP5":["Santa Catarina",-27.5954,-48.5480],
+ "PY2":["São Paulo",-23.5505,-46.6333],
+ "PR2":["São Paulo",-23.5505,-46.6333],
+ "PP6":["Sergipe",-10.9472,-37.0731],
+ "PQ2":["Tocantins",-10.2491,-48.3243]
+};
+
+function brazilPURegion(call){
+ const c=String(call||"").toUpperCase();
+ const m=c.match(/^PU([1-9])([A-Z]{3})/);
+ if(!m)return null;
+ const n=m[1], s=m[2];
+
+ const ranges={
+  "1":[["AAA","IZZ","Espírito Santo",-20.3155,-40.3128],["JAA","YZZ","Rio de Janeiro",-22.9068,-43.1729]],
+  "2":[["AAA","EZZ","Distrito Federal",-15.7939,-47.8828],["FAA","HZZ","Goiás",-16.6869,-49.2648],["IAA","JZZ","Tocantins",-10.2491,-48.3243],["KAA","YZZ","São Paulo",-23.5505,-46.6333]],
+  "3":[["AAA","YZZ","Rio Grande do Sul",-30.0346,-51.2177]],
+  "4":[["AAA","YZZ","Minas Gerais",-19.9167,-43.9345]],
+  "5":[["AAA","LZZ","Santa Catarina",-27.5954,-48.5480],["MAA","YZZ","Paraná",-25.4284,-49.2733]],
+  "6":[["AAA","IZZ","Sergipe",-10.9472,-37.0731],["JAA","YZZ","Bahia",-12.9714,-38.5014]],
+  "7":[["AAA","DZZ","Alagoas",-9.6658,-35.7350],["EAA","HZZ","Paraíba",-7.1195,-34.8450],["IAA","LZZ","Rio Grande do Norte",-5.7793,-35.2009],["MAA","PZZ","Ceará",-3.7319,-38.5267],["RAA","YZZ","Pernambuco",-8.0476,-34.8770]],
+  "8":[["AAA","CZZ","Amazonas",-3.1190,-60.0217],["DAA","FZZ","Rondônia",-8.7608,-63.8999],["GAA","IZZ","Amapá",0.0349,-51.0694],["JAA","LZZ","Acre",-9.9754,-67.8249],["MAA","OZZ","Maranhão",-2.5307,-44.3068],["PAA","SZZ","Piauí",-5.0892,-42.8019],["TAA","VZZ","Roraima",2.8235,-60.6758],["WAA","YZZ","Pará",-1.4558,-48.4902]],
+  "9":[["AAA","NZZ","Mato Grosso do Sul",-20.4697,-54.6201],["OAA","YZZ","Mato Grosso",-15.6014,-56.0979]]
+ };
+
+ for(const r of ranges[n]||[]){
+   if(s>=r[0]&&s<=r[1])return regionalPoint("Brasil","🇧🇷",r[2],r[3],r[4],c);
+ }
+ return null;
+}
+
+function brazilCallArea(call){
+ const c=String(call||"").toUpperCase().replace(/[^A-Z0-9/]/g,"");
+ if(c.startsWith("PU")) {
+   const pu=brazilPURegion(c);
+   if(pu)return pu;
+ }
+ for(const [p,v] of Object.entries(BRAZIL_DIRECT)){
+   if(c.startsWith(p))return regionalPoint("Brasil","🇧🇷",v[0],v[1],v[2],c);
+ }
+ return null;
+}
+
+// -----------------------------------------------------------------------------
+// CHILE · número = zona geográfica oficial.
+// -----------------------------------------------------------------------------
+const CHILE_ZONES={
+ "0":["Islas oceánicas",-27.12,-109.35],
+ "1":["Norte Grande",-23.65,-70.40],
+ "2":["Coquimbo / Valparaíso",-32.60,-71.25],
+ "3":["Región Metropolitana",-33.45,-70.66],
+ "4":["O'Higgins / Maule / Ñuble",-35.00,-71.20],
+ "5":["Biobío",-36.82,-73.05],
+ "6":["Araucanía / Los Ríos / Osorno",-39.40,-72.80],
+ "7":["Los Lagos / Aysén",-44.00,-72.70],
+ "8":["Magallanes",-53.16,-70.91],
+ "9":["Antártica Chilena",-62.20,-58.90]
+};
+function chileCallArea(call){
+ const c=String(call||"").toUpperCase();
+ const m=c.match(/^(CA|CB|CE|CD|XQ|XR|3G)([0-9])/);
+ if(!m)return null;
+ // CD historically/nationally may not encode zone reliably; do not force it.
+ if(m[1]==="CD")return null;
+ const z=CHILE_ZONES[m[2]];
+ return z?regionalPoint("Chile","🇨🇱",z[0],z[1],z[2],c):null;
+}
+
+// -----------------------------------------------------------------------------
+// PERÚ · número = una de nueve zonas radiales oficiales.
+// -----------------------------------------------------------------------------
+const PERU_ZONES={
+ "1":["Tumbes / Piura / Lambayeque",-5.18,-80.63],
+ "2":["La Libertad / Cajamarca",-7.15,-78.52],
+ "3":["Áncash / Huánuco",-9.80,-76.24],
+ "4":["Lima / Junín / Pasco / Callao",-12.05,-77.04],
+ "5":["Ica / Ayacucho / Huancavelica / Apurímac",-13.60,-74.60],
+ "6":["Arequipa / Moquegua / Tacna",-16.40,-71.54],
+ "7":["Cusco / Puno / Madre de Dios",-13.53,-71.97],
+ "8":["Loreto / Ucayali",-5.30,-74.00],
+ "9":["Amazonas / San Martín",-6.49,-76.37]
+};
+function peruCallArea(call){
+ const c=String(call||"").toUpperCase();
+ const m=c.match(/^(OA|OB|OC)([1-9])/);
+ if(!m)return null;
+ const z=PERU_ZONES[m[2]];
+ return z?regionalPoint("Perú","🇵🇪",z[0],z[1],z[2],c):null;
+}
+
+// -----------------------------------------------------------------------------
+// PARAGUAY · ZP1..ZP9 = división geográfica oficial CONATEL.
+// -----------------------------------------------------------------------------
+const PARAGUAY_ZONES={
+ "1":["Alto Paraguay / Boquerón",-22.72,-60.50],
+ "2":["Presidente Hayes",-23.44,-58.45],
+ "3":["Concepción / Amambay",-22.70,-56.80],
+ "4":["San Pedro / Canindeyú",-24.05,-56.20],
+ "5":["Asunción",-25.2867,-57.3333],
+ "6":["Central / Cordillera / Paraguarí",-25.40,-57.15],
+ "7":["Guairá / Caaguazú / Caazapá",-25.45,-56.25],
+ "8":["Misiones / Ñeembucú",-26.60,-57.30],
+ "9":["Itapúa / Alto Paraná",-25.50,-55.60]
+};
+function paraguayCallArea(call){
+ const c=String(call||"").toUpperCase();
+ const m=c.match(/^ZP([1-9])/);
+ if(!m)return null;
+ const z=PARAGUAY_ZONES[m[1]];
+ return z?regionalPoint("Paraguay","🇵🇾",z[0],z[1],z[2],c,.12,.16):null;
+}
+
+// -----------------------------------------------------------------------------
+// ECUADOR · HC/HD + número = distrito oficial.
+// -----------------------------------------------------------------------------
+const ECUADOR_ZONES={
+ "1":["Sierra norte / Pichincha",-0.18,-78.47],
+ "2":["Guayas / Los Ríos / Santa Elena",-2.17,-79.92],
+ "3":["El Oro / Loja",-3.55,-79.90],
+ "4":["Manabí / Esmeraldas",-0.95,-80.73],
+ "5":["Chimborazo / Cañar / Azuay",-2.90,-79.00],
+ "6":["Cotopaxi / Tungurahua / Bolívar",-1.25,-78.62],
+ "7":["Amazonía ecuatoriana",-1.50,-77.80],
+ "8":["Galápagos",-0.90,-89.61]
+};
+function ecuadorCallArea(call){
+ const c=String(call||"").toUpperCase();
+ const m=c.match(/^(HC|HD)([1-8])/);
+ if(!m)return null;
+ const z=ECUADOR_ZONES[m[2]];
+ return z?regionalPoint("Ecuador","🇪🇨",z[0],z[1],z[2],c):null;
+}
+
+// -----------------------------------------------------------------------------
+// COLOMBIA · HK/HJ + número = zona oficial.
+// -----------------------------------------------------------------------------
+const COLOMBIA_ZONES={
+ "0":["Territorio insular",12.58,-81.70],
+ "1":["Caribe occidental",10.40,-75.50],
+ "2":["Caribe oriental / N. Santander",10.45,-73.25],
+ "3":["Cundinamarca / Meta / Vichada",4.71,-74.07],
+ "4":["Antioquia / Chocó",6.25,-75.56],
+ "5":["Valle / Cauca",3.45,-76.53],
+ "6":["Eje cafetero / Tolima / Huila",4.55,-75.66],
+ "7":["Santander / Boyacá / Llanos norte",6.90,-73.10],
+ "8":["Nariño / Putumayo / Caquetá",1.21,-77.28],
+ "9":["Amazonía oriental",-1.00,-70.00]
+};
+function colombiaCallArea(call){
+ const c=String(call||"").toUpperCase();
+ const m=c.match(/^(HK|HJ)([0-9])/);
+ if(!m)return null;
+ const z=COLOMBIA_ZONES[m[2]];
+ return z?regionalPoint("Colombia","🇨🇴",z[0],z[1],z[2],c):null;
+}
+
+// -----------------------------------------------------------------------------
+// Resto de Sudamérica: fallback nacional honesto.
+// No inferimos una zona si no tenemos una regla oficial fiable.
+// -----------------------------------------------------------------------------
+const SOUTH_AMERICA_COUNTRY_FALLBACKS=[
+ {re:/^CP/,country:"Bolivia",flag:"🇧🇴",region:"Bolivia",lat:-16.49,lon:-68.12},
+ {re:/^CX/,country:"Uruguay",flag:"🇺🇾",region:"Uruguay",lat:-32.80,lon:-56.00},
+ {re:/^(YV|YW|YY)/,country:"Venezuela",flag:"🇻🇪",region:"Venezuela",lat:8.00,lon:-66.00},
+ {re:/^(8R)/,country:"Guyana",flag:"🇬🇾",region:"Guyana",lat:5.00,lon:-59.00},
+ {re:/^(PZ)/,country:"Surinam",flag:"🇸🇷",region:"Surinam",lat:4.00,lon:-56.00},
+ {re:/^(FY)/,country:"Guayana Francesa",flag:"🇬🇫",region:"Guayana Francesa",lat:4.00,lon:-53.00},
+ {re:/^(9Y|9Z)/,country:"Trinidad y Tobago",flag:"🇹🇹",region:"Trinidad y Tobago",lat:10.66,lon:-61.52},
+ {re:/^VP8/,country:"Atlántico Sur",flag:"🌐",region:"Atlántico Sur",lat:-51.70,lon:-57.85}
+];
+
+function southAmericaRegionalInfo(call){
+ return argentinaCallArea(call)
+   || brazilCallArea(call)
+   || chileCallArea(call)
+   || peruCallArea(call)
+   || paraguayCallArea(call)
+   || ecuadorCallArea(call)
+   || colombiaCallArea(call)
+   || (() => {
+      const c=String(call||"").toUpperCase();
+      const f=SOUTH_AMERICA_COUNTRY_FALLBACKS.find(x=>x.re.test(c));
+      return f ? regionalPoint(f.country,f.flag,f.region,f.lat,f.lon,c,.25,.35) : null;
+   })();
+}
+
+
+// ===== GLOBAL DX COUNTRY / FLAG RESOLVER =====================================
+// Fuera de Sudamérica buscamos principalmente país + bandera.
+// No pretendemos resolver QTH exacto: las coordenadas son centros aproximados
+// del país/entidad para que el mapa no caiga en 🌐 innecesariamente.
+const GLOBAL_DX_PREFIXES=[
+  // Norteamérica / Caribe
+  {p:["K","N","W","AA","AB","AC","AD","AE","AF","AG","AI","AJ","AK"],country:"USA",flag:"🇺🇸",lat:39.8,lon:-98.6},
+  {p:["KL","AL","NL","WL"],country:"Alaska",flag:"🇺🇸",lat:64.2,lon:-149.5},
+  {p:["KH6","AH6","NH6","WH6","KH7","AH7","NH7","WH7"],country:"Hawái",flag:"🇺🇸",lat:20.8,lon:-156.3},
+  {p:["VE","VA","VY","VO"],country:"Canadá",flag:"🇨🇦",lat:56.1,lon:-106.3},
+  {p:["XE","XF","XA"],country:"México",flag:"🇲🇽",lat:23.6,lon:-102.5},
+  {p:["KP4","WP4","NP4"],country:"Puerto Rico",flag:"🇵🇷",lat:18.22,lon:-66.59},
+  {p:["HI"],country:"Rep. Dominicana",flag:"🇩🇴",lat:18.74,lon:-70.16},
+  {p:["CO","CM","CL","T4"],country:"Cuba",flag:"🇨🇺",lat:21.52,lon:-77.78},
+  {p:["HH"],country:"Haití",flag:"🇭🇹",lat:18.97,lon:-72.29},
+  {p:["6Y"],country:"Jamaica",flag:"🇯🇲",lat:18.11,lon:-77.30},
+  {p:["V3"],country:"Belice",flag:"🇧🇿",lat:17.19,lon:-88.50},
+  {p:["TG","TD"],country:"Guatemala",flag:"🇬🇹",lat:15.78,lon:-90.23},
+  {p:["YS","HU"],country:"El Salvador",flag:"🇸🇻",lat:13.79,lon:-88.90},
+  {p:["HR","HQ"],country:"Honduras",flag:"🇭🇳",lat:15.20,lon:-86.24},
+  {p:["YN","HT"],country:"Nicaragua",flag:"🇳🇮",lat:12.87,lon:-85.21},
+  {p:["TI","TE"],country:"Costa Rica",flag:"🇨🇷",lat:9.75,lon:-83.75},
+  {p:["HP","HO"],country:"Panamá",flag:"🇵🇦",lat:8.54,lon:-80.78},
+
+  // Europa occidental / norte
+  {p:["EA","EB","EC","ED","EE","EF","EG","EH","AM","AN","AO"],country:"España",flag:"🇪🇸",lat:40.42,lon:-3.70},
+  {p:["CT","CQ","CR","CS"],country:"Portugal",flag:"🇵🇹",lat:39.40,lon:-8.22},
+  {p:["F","TM","TO","TP"],country:"Francia",flag:"🇫🇷",lat:46.23,lon:2.21},
+  {p:["G","M","2E","2M","2W"],country:"Reino Unido",flag:"🇬🇧",lat:54.5,lon:-3.0},
+  {p:["EI"],country:"Irlanda",flag:"🇮🇪",lat:53.14,lon:-7.69},
+  {p:["ON","OR","OS","OT"],country:"Bélgica",flag:"🇧🇪",lat:50.50,lon:4.47},
+  {p:["PA","PB","PC","PD","PE","PF","PG","PH","PI"],country:"Países Bajos",flag:"🇳🇱",lat:52.13,lon:5.29},
+  {p:["LX"],country:"Luxemburgo",flag:"🇱🇺",lat:49.82,lon:6.13},
+  {p:["DL","DA","DB","DC","DD","DE","DF","DG","DH","DJ","DK","DM","DN","DO","DP","DQ","DR"],country:"Alemania",flag:"🇩🇪",lat:51.17,lon:10.45},
+  {p:["HB"],country:"Suiza",flag:"🇨🇭",lat:46.82,lon:8.23},
+  {p:["OE"],country:"Austria",flag:"🇦🇹",lat:47.52,lon:14.55},
+  {p:["OZ"],country:"Dinamarca",flag:"🇩🇰",lat:56.26,lon:9.50},
+  {p:["LA","LB","LC","LD","LE","LF","LG","LJ","LK","LM","LN"],country:"Noruega",flag:"🇳🇴",lat:60.47,lon:8.47},
+  {p:["SM","SA","SB","SC","SD","SE","SF","SG","SH","SI","SJ","SK","SL"],country:"Suecia",flag:"🇸🇪",lat:60.13,lon:18.64},
+  {p:["OH"],country:"Finlandia",flag:"🇫🇮",lat:61.92,lon:25.75},
+  {p:["TF"],country:"Islandia",flag:"🇮🇸",lat:64.96,lon:-19.02},
+
+  // Europa central / este
+  {p:["I","IK","IZ","IU","IW","IQ","IR","II"],country:"Italia",flag:"🇮🇹",lat:42.83,lon:12.83},
+  {p:["S5"],country:"Eslovenia",flag:"🇸🇮",lat:46.15,lon:14.99},
+  {p:["9A"],country:"Croacia",flag:"🇭🇷",lat:45.10,lon:15.20},
+  {p:["E7"],country:"Bosnia y Herzegovina",flag:"🇧🇦",lat:43.92,lon:17.68},
+  {p:["YT","YU","YZ"],country:"Serbia",flag:"🇷🇸",lat:44.02,lon:21.01},
+  {p:["4O"],country:"Montenegro",flag:"🇲🇪",lat:42.71,lon:19.37},
+  {p:["Z3"],country:"Macedonia del Norte",flag:"🇲🇰",lat:41.61,lon:21.75},
+  {p:["ZA"],country:"Albania",flag:"🇦🇱",lat:41.15,lon:20.17},
+  {p:["SV","SX","SZ","J4"],country:"Grecia",flag:"🇬🇷",lat:39.07,lon:21.82},
+  {p:["LZ"],country:"Bulgaria",flag:"🇧🇬",lat:42.73,lon:25.49},
+  {p:["YO","YR"],country:"Rumania",flag:"🇷🇴",lat:45.94,lon:24.97},
+  {p:["HA","HG"],country:"Hungría",flag:"🇭🇺",lat:47.16,lon:19.50},
+  {p:["OM"],country:"Eslovaquia",flag:"🇸🇰",lat:48.67,lon:19.70},
+  {p:["OK","OL"],country:"Chequia",flag:"🇨🇿",lat:49.82,lon:15.47},
+  {p:["SP","SQ","SN","SO","HF","3Z"],country:"Polonia",flag:"🇵🇱",lat:51.92,lon:19.15},
+  {p:["ES"],country:"Estonia",flag:"🇪🇪",lat:58.60,lon:25.01},
+  {p:["YL"],country:"Letonia",flag:"🇱🇻",lat:56.88,lon:24.60},
+  {p:["LY"],country:"Lituania",flag:"🇱🇹",lat:55.17,lon:23.88},
+  {p:["UR","US","UT","UU","UV","UW","UX","UY","UZ","EM","EN","EO"],country:"Ucrania",flag:"🇺🇦",lat:48.38,lon:31.17},
+  {p:["ER"],country:"Moldavia",flag:"🇲🇩",lat:47.41,lon:28.37},
+  {p:["EU","EV","EW"],country:"Bielorrusia",flag:"🇧🇾",lat:53.71,lon:27.95},
+
+  // Rusia / Cáucaso / Asia central
+  {p:["R","UA","UB","UC","UD","UE","UF","UG","UH","UI"],country:"Rusia",flag:"🇷🇺",lat:61.5,lon:90.0},
+  {p:["4X","4Z"],country:"Israel",flag:"🇮🇱",lat:31.05,lon:34.85},
+  {p:["TA","TB","TC","YM"],country:"Turquía",flag:"🇹🇷",lat:38.96,lon:35.24},
+  {p:["EK"],country:"Armenia",flag:"🇦🇲",lat:40.07,lon:45.04},
+  {p:["4L"],country:"Georgia",flag:"🇬🇪",lat:42.32,lon:43.36},
+  {p:["4K"],country:"Azerbaiyán",flag:"🇦🇿",lat:40.14,lon:47.58},
+  {p:["UN","UP","UQ"],country:"Kazajistán",flag:"🇰🇿",lat:48.02,lon:66.92},
+  {p:["UK"],country:"Uzbekistán",flag:"🇺🇿",lat:41.38,lon:64.59},
+  {p:["EY"],country:"Tayikistán",flag:"🇹🇯",lat:38.86,lon:71.28},
+  {p:["EX"],country:"Kirguistán",flag:"🇰🇬",lat:41.20,lon:74.77},
+
+  // Asia
+  {p:["JA","JE","JF","JG","JH","JI","JJ","JK","JL","JM","JN","JO","JP","JQ","JR","JS"],country:"Japón",flag:"🇯🇵",lat:36.20,lon:138.25},
+  {p:["HL","DS","DT","D7","D8","D9"],country:"Corea del Sur",flag:"🇰🇷",lat:35.91,lon:127.77},
+  {p:["BY","BA","BD","BG","BH","BI","BJ","BL","BM","BN","BO","BP","BQ","BR","BS","BT","BU","BV","BW","BX"],country:"China",flag:"🇨🇳",lat:35.86,lon:104.20},
+  {p:["BV"],country:"Taiwán",flag:"🇹🇼",lat:23.70,lon:120.96},
+  {p:["VR2"],country:"Hong Kong",flag:"🇭🇰",lat:22.32,lon:114.17},
+  {p:["VU","AT","AU","VT"],country:"India",flag:"🇮🇳",lat:20.59,lon:78.96},
+  {p:["AP","AQ","AR","AS"],country:"Pakistán",flag:"🇵🇰",lat:30.38,lon:69.35},
+  {p:["9M2"],country:"Malasia",flag:"🇲🇾",lat:4.21,lon:101.98},
+  {p:["9V"],country:"Singapur",flag:"🇸🇬",lat:1.35,lon:103.82},
+  {p:["HS","E2"],country:"Tailandia",flag:"🇹🇭",lat:15.87,lon:100.99},
+  {p:["3W","XV"],country:"Vietnam",flag:"🇻🇳",lat:14.06,lon:108.28},
+  {p:["DU","DV","DW","DX","DY","DZ","4D","4E","4F","4G","4H","4I"],country:"Filipinas",flag:"🇵🇭",lat:12.88,lon:121.77},
+  {p:["YB","YC","YD","YE","YF","YG","YH"],country:"Indonesia",flag:"🇮🇩",lat:-2.55,lon:118.01},
+
+  // Oceanía
+  {p:["VK"],country:"Australia",flag:"🇦🇺",lat:-25.27,lon:133.78},
+  {p:["ZL"],country:"Nueva Zelanda",flag:"🇳🇿",lat:-40.90,lon:174.89},
+  {p:["3D2"],country:"Fiyi",flag:"🇫🇯",lat:-17.71,lon:178.07},
+  {p:["A3"],country:"Tonga",flag:"🇹🇴",lat:-21.18,lon:-175.20},
+  {p:["5W"],country:"Samoa",flag:"🇼🇸",lat:-13.76,lon:-172.10},
+
+  // África
+  {p:["ZS","ZR","ZT","ZU"],country:"Sudáfrica",flag:"🇿🇦",lat:-30.56,lon:22.94},
+  {p:["CN"],country:"Marruecos",flag:"🇲🇦",lat:31.79,lon:-7.09},
+  {p:["7X"],country:"Argelia",flag:"🇩🇿",lat:28.03,lon:1.66},
+  {p:["3V","TS"],country:"Túnez",flag:"🇹🇳",lat:33.89,lon:9.54},
+  {p:["SU"],country:"Egipto",flag:"🇪🇬",lat:26.82,lon:30.80},
+  {p:["5N"],country:"Nigeria",flag:"🇳🇬",lat:9.08,lon:8.68},
+  {p:["5R"],country:"Madagascar",flag:"🇲🇬",lat:-18.77,lon:46.87},
+  {p:["V5"],country:"Namibia",flag:"🇳🇦",lat:-22.96,lon:18.49},
+  {p:["A2"],country:"Botsuana",flag:"🇧🇼",lat:-22.33,lon:24.68},
+  {p:["9J"],country:"Zambia",flag:"🇿🇲",lat:-13.13,lon:27.85},
+  {p:["Z2"],country:"Zimbabue",flag:"🇿🇼",lat:-19.02,lon:29.15},
+  {p:["5H","5I"],country:"Tanzania",flag:"🇹🇿",lat:-6.37,lon:34.89},
+  {p:["5X"],country:"Uganda",flag:"🇺🇬",lat:1.37,lon:32.29},
+  {p:["5Z"],country:"Kenia",flag:"🇰🇪",lat:-0.02,lon:37.91},
+  {p:["9X"],country:"Ruanda",flag:"🇷🇼",lat:-1.94,lon:29.87},
+  {p:["ET"],country:"Etiopía",flag:"🇪🇹",lat:9.15,lon:40.49},
+
+  // Oriente Medio
+  {p:["A4"],country:"Omán",flag:"🇴🇲",lat:21.47,lon:55.98},
+  {p:["A6"],country:"Emiratos Árabes Unidos",flag:"🇦🇪",lat:23.42,lon:53.85},
+  {p:["A7"],country:"Catar",flag:"🇶🇦",lat:25.35,lon:51.18},
+  {p:["A9"],country:"Baréin",flag:"🇧🇭",lat:26.07,lon:50.56},
+  {p:["HZ","7Z","8Z"],country:"Arabia Saudita",flag:"🇸🇦",lat:23.89,lon:45.08},
+  {p:["9K"],country:"Kuwait",flag:"🇰🇼",lat:29.31,lon:47.48},
+  {p:["JY"],country:"Jordania",flag:"🇯🇴",lat:30.59,lon:36.24},
+  {p:["OD5"],country:"Líbano",flag:"🇱🇧",lat:33.85,lon:35.86}
+];
+
+function globalDxCountryInfo(call){
+  const c=String(call||"").toUpperCase();
+  let best=null;
+  let bestLen=-1;
+
+  for(const row of GLOBAL_DX_PREFIXES){
+    for(const p of row.p){
+      if(c.startsWith(p) && p.length>bestLen){
+        best=row;
+        bestLen=p.length;
+      }
+    }
+  }
+
+  if(!best)return null;
+
+  return {
+    country:best.country,
+    flag:best.flag,
+    lat:best.lat+geoTinyJitter(c,.22),
+    lon:best.lon+geoTinyJitter([...c].reverse().join(""),.30),
+    regional:false,
+    dxCountry:true
+  };
+}
+
 function prefixInfo(call){
  const c=(call||"").toUpperCase();
+
+ const sa=southAmericaRegionalInfo(c);
+ if(sa)return sa;
+
+ const global=globalDxCountryInfo(c);
+ if(global)return global;
+
  const keys=Object.keys(stationDB).sort((a,b)=>b.length-a.length);
  const k=keys.find(p=>c.startsWith(p));
  const base=k?stationDB[k]:{country:"DX",flag:"🌐",lat:0,lon:0};
- const jitter=(str)=>((str.split("").reduce((a,x)=>a+x.charCodeAt(0),0)%100)-50)/100;
- return {...base,lat:base.lat+jitter(c)*2.2,lon:base.lon+jitter(c.split("").reverse().join(""))*3.0};
+
+ // Para DX fuera de Sudamérica no buscamos precisión regional.
+ return {
+   ...base,
+   lat:base.lat+geoTinyJitter(c,.32),
+   lon:base.lon+geoTinyJitter([...c].reverse().join(""),.42),
+   regional:false
+ };
 }
+
 function isSA(call){const c=(call||"").toUpperCase();return SA_PREFIXES.some(p=>c.startsWith(p))}
 function isLATAM(call){const c=(call||"").toUpperCase();return LATAM_PREFIXES.some(p=>c.startsWith(p))}
 function normalizeSpot(s){
@@ -2026,12 +3205,31 @@ const osmLayer=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
 }).addTo(map);
 map.on("zoomend moveend resize",layoutMapLabels);
 
+const PROP_REFRESH_MS=5*60*1000;
+let propagationState={
+  kp:null,
+  sfi:null,
+  source:"radar",
+  updatedAt:0
+};
+
 let mapVisualMode=localStorage.getItem("cwlatam_map_mode")||"radar";
 function applyMapVisualMode(mode){
   mapVisualMode=mode==="map"?"map":"radar";
   document.documentElement.setAttribute("data-map-mode",mapVisualMode);
+
   document.getElementById("mapModeMap")?.classList.toggle("active",mapVisualMode==="map");
   document.getElementById("mapModeRadar")?.classList.toggle("active",mapVisualMode==="radar");
+
+  const src=document.getElementById("propSource");
+  if(src){
+    src.textContent=propagationState.updatedAt
+      ? (propagationState.source==="noaa+radar"
+          ?"NOAA SWPC + Radar CW LATAM"
+          :"Radar CW LATAM · NOAA sin respuesta")
+      : "Radar CW LATAM · consultando NOAA";
+  }
+
   localStorage.setItem("cwlatam_map_mode",mapVisualMode);
   setTimeout(()=>map.invalidateSize(),40);
 }
@@ -2050,7 +3248,11 @@ function createSpotLabel(s){
  const badge=channel
    ? '<span class="channel-badge">7033</span>'
    : (watched?'<span class="watch-badge">ALERTA</span>':"");
- const precise=info.exact?`<span class="location-source" title="${info.locator}">GRID</span>`:"";
+ const precise=info.exact
+   ? `<span class="location-source" title="${info.locator}">GRID</span>`
+   : (info.regional
+      ? `<span class="location-source" title="${info.region||"Región del callsign"}">REG</span>`
+      : "");
  const html=`<div class="spot-label ${cls}">
    <div class="c">${info.flag} ${s.dx}${badge}${precise}</div>
    <div>${freqLine} · ${s.snr>=0?"+":""}${s.snr} dB</div>
@@ -2278,6 +3480,7 @@ function pruneMap(){
  layoutMapLabels();
 }
 function prune(){
+ refreshFooterLiveStats();
  const now=Date.now();
 
  // El cooldown del reporte humano es independiente de cuánto tiempo
@@ -2379,6 +3582,60 @@ async function saveMapFocus(enabled=focusMode){
  },700);
 }
 
+function stationMapPosition(){
+ if(!currentProfile)return null;
+
+ const directLat=Number(currentProfile.lat);
+ const directLon=Number(currentProfile.lon);
+ if(Number.isFinite(directLat)&&Number.isFinite(directLon)){
+   return {
+     lat:directLat,
+     lon:directLon,
+     locator:String(currentProfile.locator||"").toUpperCase()
+   };
+ }
+
+ const known=stationLocationCache.get(String(currentProfile.callsign||"").toUpperCase());
+ if(known && Number.isFinite(Number(known.lat)) && Number.isFinite(Number(known.lon))){
+   return {
+     lat:Number(known.lat),
+     lon:Number(known.lon),
+     locator:String(known.locator||currentProfile.locator||"").toUpperCase()
+   };
+ }
+
+ return null;
+}
+
+function centerOnMyStation(){
+ const pos=stationMapPosition();
+ if(!pos){
+   showToast(currentLang==="pt"?"Locator da estação indisponível":"Locator de la estación no disponible");
+   return;
+ }
+
+ const len=pos.locator.replace(/[^A-Z0-9]/g,"").length;
+ const zoom=len>=6?7:5;
+
+ const btn=document.getElementById("myStationMapBtn");
+ btn?.classList.add("locating");
+
+ map.flyTo([pos.lat,pos.lon],zoom,{
+   animate:true,
+   duration:.85
+ });
+
+ setTimeout(()=>btn?.classList.remove("locating"),1100);
+
+ showToast(
+   currentLang==="pt"
+     ? `🎯 Minha estação · ${pos.locator||currentProfile.callsign}`
+     : `🎯 Mi estación · ${pos.locator||currentProfile.callsign}`
+ );
+}
+
+document.getElementById("myStationMapBtn")?.addEventListener("click",centerOnMyStation);
+
 async function restoreMapFocus(){
  if(!currentProfile||!sessionToken)return;
  try{
@@ -2449,6 +3706,7 @@ map.on("moveend zoomend",()=>{
 });
 
 function renderActivity(){
+ refreshFooterLiveStats();
  const el=document.getElementById("decodeStream");
  const now=Date.now();
 
@@ -2487,7 +3745,7 @@ function renderActivity(){
      return (b[1].totalSpots||0)-(a[1].totalSpots||0);
    });
 
- const visibleRows=rows.slice(0,10);
+ const visibleRows=rows;
 
  if(!visibleRows.length){
    el.innerHTML=`<div class="empty">${t("waitingCW")}</div>`;
@@ -2561,6 +3819,26 @@ function renderDial(){
     return `<div class="dial-spot ${dialAlert}" onclick="silenceSpotAlert('${call}');openQRZ('${call}')" style="left:${pct}%;top:${top}px;opacity:${opacity};cursor:pointer" title="${call} ${v.actualFreq?.toFixed?.(1) || v.freq.toFixed(1)}">${call}</div>`
  }).join("")
 }
+
+function syncMainPanelHeights(){
+ const left=document.querySelector(".grid > section.panel");
+ const right=document.querySelector(".grid > .live-decode");
+ if(!left||!right)return;
+
+ if(window.innerWidth<=980){
+   right.style.removeProperty("height");
+   return;
+ }
+
+ const h=Math.round(left.getBoundingClientRect().height);
+ if(h>0)right.style.setProperty("height",`${h}px`,"important");
+}
+
+const mainPanelResizeObserver=new ResizeObserver(()=>syncMainPanelHeights());
+const mainLeftPanel=document.querySelector(".grid > section.panel");
+if(mainLeftPanel)mainPanelResizeObserver.observe(mainLeftPanel);
+window.addEventListener("resize",syncMainPanelHeights);
+requestAnimationFrame(syncMainPanelHeights);
 
 function setupDialHover(){
  const scale=document.getElementById("dialScale");
@@ -3588,15 +4866,19 @@ async function loadCountryStats(){
 
    if(!countryStatsCache.length){
      track.textContent="🌎 LATAM";
+     if(communityStatsCache)renderFooterStats(communityStatsCache);
      return;
    }
 
-   const items=countryStatsCache.map(c=>
-     `${countryFlag(c.country_code)} ${c.country_code}`
-   );
+   const items=[...new Set(
+     countryStatsCache
+       .map(c=>countryFlag(c.country_code))
+       .filter(Boolean)
+   )];
 
-   // duplicado para que el ticker se vea continuo
-   track.textContent=items.concat(items).join("   ·   ");
+   // Sólo banderas: sin nombres, códigos ni cantidad por país.
+   track.textContent=items.concat(items).join("   ");
+   if(communityStatsCache)renderFooterStats(communityStatsCache);
  }catch{}
 }
 
@@ -3670,14 +4952,214 @@ async function loadModelStats(){
  }catch{}
 }
 
+function formatUsageTime(totalSeconds){
+ const s=Math.max(0,Number(totalSeconds||0));
+ const hours=Math.floor(s/3600);
+ const minutes=Math.floor((s%3600)/60);
+ if(hours>=1000)return `${hours.toLocaleString()} h`;
+ if(hours>0)return `${hours}h ${String(minutes).padStart(2,"0")}m`;
+ return `${minutes} min`;
+}
+
+function renderFooterStats(data){
+ const visitors=Number(data?.unique_visitors||0);
+ const reports=Number(data?.votes||0);
+ const usage=Number(data?.usage_seconds||0);
+ const operators=Number(data?.operators||0);
+ const countries=Array.isArray(countryStatsCache)?countryStatsCache.length:0;
+
+ const set=(id,value)=>{
+   const el=document.getElementById(id);
+   if(el)el.textContent=value;
+ };
+
+ set("footerOperators",operators.toLocaleString());
+ set("footerReports",reports.toLocaleString());
+ set("footerUsage",formatUsageTime(usage));
+ set("footerCountries",countries.toLocaleString());
+ set("footerActive",Number(active?.size||0).toLocaleString());
+ set("footerVisitors",visitors.toLocaleString());
+
+ const pt=currentLang==="pt";
+ set("footerOperatorsLabel",pt?"OPERADORES":"OPERADORES");
+ set("footerReportsLabel",pt?"RELATÓRIOS":"REPORTES");
+ set("footerUsageLabel",pt?"HORAS DE USO":"HORAS DE USO");
+ set("footerCountriesLabel",pt?"PAÍSES":"PAÍSES");
+ set("footerActiveLabel",pt?"SINAIS AGORA":"SEÑALES AHORA");
+ set("footerVisitorsLabel",pt?"VISITANTES":"VISITANTES");
+}
+
+function refreshFooterLiveStats(){
+ const el=document.getElementById("footerActive");
+ if(el)el.textContent=Number(active?.size||0).toLocaleString();
+ renderPropagation();
+}
+
+// ===== PROPAGACIÓN 40 m =======================================================
+function latestNumericField(data,fields){
+  if(!Array.isArray(data)||!data.length)return null;
+  for(let i=data.length-1;i>=0;i--){
+    const row=data[i]||{};
+    for(const key of fields){
+      const v=Number(row[key]);
+      if(Number.isFinite(v))return v;
+    }
+  }
+  return null;
+}
+
+function saActivityStats(){
+  const now=Date.now();
+  const rows=[...active.values()].filter(v=>now-v.last<=ACTIVE_MS);
+  const signals=rows.length;
+  const spotters=new Set();
+  const snrs=[];
+  for(const v of rows){
+    for(const [call,rec] of v.spotters||[]){
+      spotters.add(call);
+      const n=Number(rec?.snr);
+      if(Number.isFinite(n))snrs.push(n);
+    }
+  }
+  snrs.sort((a,b)=>a-b);
+  const med=snrs.length
+    ? (snrs.length%2?snrs[(snrs.length-1)/2]:(snrs[snrs.length/2-1]+snrs[snrs.length/2])/2)
+    : null;
+  return {signals,spotters:spotters.size,medianSnr:med};
+}
+
+function propagationBestWindow(){
+  // Ventana regional orientativa para 40 m.
+  // La ajustamos según perturbación geomagnética y actividad observada.
+  const kp=Number(propagationState.kp);
+  const act=saActivityStats();
+  if(Number.isFinite(kp)&&kp>=5)return "20:00–01:00";
+  if(act.signals>=12)return "17:30–03:00";
+  if(act.signals>=5)return "18:00–02:30";
+  return "18:30–02:00";
+}
+
+function evaluate40mPropagation(){
+  const {signals,spotters,medianSnr}=saActivityStats();
+  const kp=Number(propagationState.kp);
+  const sfi=Number(propagationState.sfi);
+
+  let score=52;
+
+  // 40 m depende menos de SFI que bandas altas, pero una ionosfera activa ayuda.
+  if(Number.isFinite(sfi)){
+    if(sfi>=180)score+=8;
+    else if(sfi>=140)score+=5;
+    else if(sfi>=100)score+=2;
+    else if(sfi<75)score-=4;
+  }
+
+  // Perturbación geomagnética: castigo progresivo.
+  if(Number.isFinite(kp)){
+    if(kp<=1)score+=9;
+    else if(kp<=2)score+=6;
+    else if(kp<=3)score+=2;
+    else if(kp===4)score-=8;
+    else if(kp>=5)score-=20;
+  }
+
+  // La propia red es nuestra evidencia regional en tiempo real.
+  score+=Math.min(18,signals*1.4);
+  score+=Math.min(10,spotters*.8);
+  if(Number.isFinite(medianSnr)){
+    if(medianSnr>=15)score+=7;
+    else if(medianSnr>=8)score+=4;
+    else if(medianSnr<0)score-=4;
+  }
+
+  score=Math.max(0,Math.min(100,Math.round(score)));
+
+  let key,label;
+  if(score>=82){key="excellent";label=currentLang==="pt"?"EXCELENTE":"EXCELENTE"}
+  else if(score>=66){key="good";label=currentLang==="pt"?"BOA":"BUENA"}
+  else if(score>=45){key="fair";label=currentLang==="pt"?"REGULAR":"REGULAR"}
+  else {key="poor";label=currentLang==="pt"?"FRACA":"POBRE"}
+
+  return {score,key,label,signals,spotters,medianSnr};
+}
+
+function renderPropagation(){
+  const ev=evaluate40mPropagation();
+  const badge=document.getElementById("propBadge");
+  const state=document.getElementById("propState");
+  const kpEl=document.getElementById("propKp");
+  const sfiEl=document.getElementById("propSfi");
+  const actEl=document.getElementById("propActivity");
+  const winEl=document.getElementById("propBestWindow");
+
+  if(badge)badge.dataset.state=ev.key;
+  if(state)state.textContent=`${ev.label} · ${ev.score}%`;
+  if(kpEl)kpEl.textContent=Number.isFinite(Number(propagationState.kp))
+    ? `Kp ${Number(propagationState.kp).toFixed(1).replace(".0","")}`
+    : "Kp —";
+  if(sfiEl)sfiEl.textContent=Number.isFinite(Number(propagationState.sfi))
+    ? `SFI ${Math.round(Number(propagationState.sfi))}`
+    : "SFI —";
+  if(actEl)actEl.textContent=currentLang==="pt"
+    ? `${ev.signals} sinais`
+    : `${ev.signals} señales`;
+  if(winEl)winEl.textContent=propagationBestWindow();
+}
+
+async function fetchJsonSafe(url,timeoutMs=6500){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),timeoutMs);
+  try{
+    const r=await fetch(url,{cache:"no-store",signal:controller.signal});
+    if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  }finally{
+    clearTimeout(timer);
+  }
+}
+
+async function loadPropagation(){
+  const kpUrl="https://services.swpc.noaa.gov/json/planetary_k_index_1m.json";
+  const sfiUrl="https://services.swpc.noaa.gov/json/f107_cm_flux.json";
+
+  const results=await Promise.allSettled([
+    fetchJsonSafe(kpUrl),
+    fetchJsonSafe(sfiUrl)
+  ]);
+
+  if(results[0].status==="fulfilled"){
+    const kp=latestNumericField(results[0].value,["kp_index","kp","Kp"]);
+    if(Number.isFinite(kp))propagationState.kp=kp;
+  }
+  if(results[1].status==="fulfilled"){
+    const sfi=latestNumericField(results[1].value,["flux","f107","f10_7","observed_flux","adjusted_flux"]);
+    if(Number.isFinite(sfi))propagationState.sfi=sfi;
+  }
+
+  propagationState.source=(results.some(x=>x.status==="fulfilled"))?"noaa+radar":"radar";
+  propagationState.updatedAt=Date.now();
+
+  const src=document.getElementById("propSource");
+  if(src){
+    src.textContent=propagationState.source==="noaa+radar"
+      ?"NOAA SWPC + Radar CW LATAM"
+      :"Radar CW LATAM · NOAA sin respuesta";
+  }
+
+  renderPropagation();
+}
+
+renderPropagation();
+setTimeout(loadPropagation,900);
+setInterval(loadPropagation,PROP_REFRESH_MS);
+setInterval(renderPropagation,15000);
+
 async function loadCommunityStats(){
  try{
-   const {data}=await sb.rpc("cw_get_public_stats");
-   if(!data)return;
+   const {data,error}=await sb.rpc("cw_get_public_stats");
+   if(error||!data)return;
    communityStatsCache=data;
-   const visits=Number(data.visits||0).toLocaleString();
-   document.getElementById("communityStats").innerHTML=
-     `<span class="visit-total">${visits}</span> visitas`;
+   renderFooterStats(data);
  }catch{}
 }
 
@@ -3698,6 +5180,19 @@ function applyLanguage(){
  document.getElementById("globalBtn").textContent=t("region");
  document.getElementById("focusBtn").textContent=t("focus");
  document.getElementById("myFocusBtn").textContent=t("myFocus");
+ renderPropagation();
+ const propSrc=document.getElementById("propSource");
+ if(propSrc){
+   propSrc.textContent=propagationState.source==="noaa+radar"
+     ?"NOAA SWPC + Radar CW LATAM"
+     :(currentLang==="pt"?"Radar CW LATAM · NOAA sem resposta":"Radar CW LATAM · NOAA sin respuesta");
+ }
+ const myStationBtn=document.getElementById("myStationMapBtn");
+ if(myStationBtn){
+   const label=myStationBtn.querySelector("span");
+   if(label)label.textContent=currentLang==="pt"?"MINHA ESTAÇÃO":"MI ESTACIÓN";
+   myStationBtn.title=currentLang==="pt"?"Centralizar o mapa no meu locator":"Centrar el mapa en mi locator";
+ }
  document.querySelector(".map-badge b").textContent="● "+t("radar");
  const kicker=document.querySelector(".meet-kicker");
  const meetMain=document.querySelector(".dial-callout strong");
@@ -3711,7 +5206,7 @@ function applyLanguage(){
  updateProfileUI();
  renderSeasonUI();
  renderActivity();
- if(communityStatsCache)loadCommunityStats();
+ if(communityStatsCache)renderFooterStats(communityStatsCache);
 
  renderPublicRanking();
  renderSeasonUI();}
