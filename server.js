@@ -1,50 +1,37 @@
 const net = require("net");
-const express = require("express");
 const http = require("http");
 const { WebSocketServer } = require("ws");
 
-const PORT = process.env.PORT || 10000;
+const PORT = Number(process.env.PORT || 3000);
 
-/*
- * ============================================================
- * CW LATAM — RBN RELAY + GREEN API WHATSAPP
- * ============================================================
- */
-
-/*
+/* ============================================================
  * RBN
- */
+ * ============================================================ */
 const RBN_HOST = "telnet.reversebeacon.net";
 const RBN_PORT = 7000;
+const RBN_LOGIN = String(process.env.RBN_LOGIN || "ZP5DXS").trim();
 
-const RBN_LOGIN = String(
-  process.env.RBN_LOGIN || "ZP5DXS"
-).trim();
+const HISTORY_MS = 10 * 60 * 1000;
+const RBN_WATCHDOG_MS = 90 * 1000;
+const WS_HEARTBEAT_MS = 20 * 1000;
+const APP_HEARTBEAT_MS = 15 * 1000;
 
-
-/*
- * ============================================================
+/* ============================================================
  * GREEN API / WHATSAPP
- * ============================================================
  *
- * CONFIGURAR EN RENDER:
+ * Configurar en Render -> Environment:
  *
  * GREEN_API_URL=https://7107.api.greenapi.com
  * GREEN_ID_INSTANCE=710722718606
  * GREEN_API_TOKEN=TU_TOKEN
- *
  * WHATSAPP_CHAT_ID=120363409458161118@g.us
  * WHATSAPP_ENABLED=true
- *
  * CW_LATAM_URL=https://zp5dxs.github.io/CW-LATAM/
  *
- * IMPORTANTE:
- * El token NO debe escribirse dentro de este archivo.
- */
+ * NO pongas el token dentro del código.
+ * ============================================================ */
 
-const GREEN_API_URL = String(
-  process.env.GREEN_API_URL || ""
-)
+const GREEN_API_URL = String(process.env.GREEN_API_URL || "")
   .trim()
   .replace(/\/+$/, "");
 
@@ -61,23 +48,14 @@ const WHATSAPP_CHAT_ID = String(
 ).trim();
 
 const WHATSAPP_ENABLED =
-  String(
-    process.env.WHATSAPP_ENABLED || "false"
-  )
+  String(process.env.WHATSAPP_ENABLED || "false")
     .trim()
     .toLowerCase() === "true";
 
 const CW_LATAM_URL = String(
   process.env.CW_LATAM_URL ||
-    "https://zp5dxs.github.io/CW-LATAM/"
+  "https://zp5dxs.github.io/CW-LATAM/"
 ).trim();
-
-
-/*
- * ============================================================
- * CONFIGURACIÓN WHATSAPP
- * ============================================================
- */
 
 const WHATSAPP_ALERT_COOLDOWN_MS =
   10 * 60 * 1000;
@@ -86,46 +64,40 @@ const WHATSAPP_DIGEST_MS =
   60 * 60 * 1000;
 
 
-/*
- * ============================================================
- * EXPRESS / HTTP / WEBSOCKET
- * ============================================================
- */
-
-const app = express();
-const server = http.createServer(app);
-
-const wss = new WebSocketServer({
-  server
-});
-
-
-/*
- * ============================================================
+/* ============================================================
  * ESTADO GENERAL
- * ============================================================
- */
+ * ============================================================ */
 
-let rbnSocket = null;
-let rbnConnected = false;
+const clients = new Set();
+const history = [];
+
+let rbn = null;
+let buffer = "";
+let reconnectTimer = null;
 
 let lastRbnDataAt = 0;
-let lastAcceptedSpotAt = 0;
-
-let acceptedSpots = 0;
-let rejectedSpots = 0;
+let rbnConnected = false;
 
 let spotSequence = 0;
 
 
-/*
- * ============================================================
+/* ============================================================
  * ESTADO WHATSAPP
- * ============================================================
- */
+ * ============================================================ */
 
 const whatsappAlertedCalls =
   new Map();
+
+let whatsappQueue =
+  Promise.resolve();
+
+let whatsappLastAlertAt = 0;
+let whatsappLastDigestAt = 0;
+
+let whatsappLastError = "";
+
+let whatsappSentAlerts = 0;
+let whatsappSentDigests = 0;
 
 const whatsappHour = {
   startedAt: Date.now(),
@@ -141,45 +113,101 @@ const whatsappHour = {
   countries: new Set()
 };
 
-let whatsappQueue =
-  Promise.resolve();
 
-let whatsappLastAlertAt = 0;
-let whatsappLastDigestAt = 0;
+/* ============================================================
+ * SPOTTERS SUDAMÉRICA
+ * ============================================================ */
 
-let whatsappLastError = "";
+const SA_PREFIXES = [
 
-let whatsappSentAlerts = 0;
-let whatsappSentDigests = 0;
+  "LU", "LW", "AY", "AZ",
+  "LO", "LP", "LQ", "LR",
+  "LS", "LT", "LV",
+
+  "CX",
+
+  "ZP",
+
+  "PY", "PP", "PQ", "PR",
+  "PS", "PT", "PU", "PV",
+  "PW", "PX", "ZY", "ZZ",
+
+  "CE", "CA", "CB", "CC",
+  "CD", "XQ",
+
+  "OA", "OB",
+
+  "CP",
+
+  "HC", "HD",
+
+  "YV", "YW", "YY",
+
+  "HK", "HJ",
+
+  "FY",
+
+  "8R",
+
+  "PZ",
+
+  "9Y", "9Z",
+
+  "P4",
+
+  "PJ2", "PJ4", "PJ9",
+
+  "VP8"
+];
 
 
-/*
- * ============================================================
+/* ============================================================
  * UTILIDADES
- * ============================================================
- */
+ * ============================================================ */
 
 function cleanCall(call) {
+
   return String(call || "")
-    .trim()
     .toUpperCase()
-    .replace(/[^A-Z0-9/]/g, "");
+    .replace(/-#$/, "")
+    .trim();
+
 }
 
 
+function isSouthAmericaSpotter(call) {
+
+  const c =
+    cleanCall(call);
+
+  return SA_PREFIXES.some(
+    prefix =>
+      c.startsWith(prefix)
+  );
+
+}
+
+
+/*
+ * País aproximado para el digest.
+ * No afecta mapa ni FOCO.
+ */
+
 function roughCountry(call) {
-  const c = cleanCall(call);
+
+  const c =
+    cleanCall(call);
 
   const rules = [
 
-    [/^(ZP)/, "PY"],
+    [/^ZP/, "PY"],
 
     [
       /^(LU|LW|AY|AZ|LO|LP|LQ|LR|LS|LT|LV)/,
       "AR"
     ],
 
-    [/^(CX)/, "UY"],
+    [/^CX/, "UY"],
 
     [
       /^(PY|PP|PQ|PR|PS|PT|PU|PV|PW|PX|ZY|ZZ)/,
@@ -191,40 +219,66 @@ function roughCountry(call) {
       "CL"
     ],
 
-    [/^(OA|OB)/, "PE"],
+    [
+      /^(OA|OB)/,
+      "PE"
+    ],
 
-    [/^(CP)/, "BO"],
+    [
+      /^CP/,
+      "BO"
+    ],
 
-    [/^(HC|HD)/, "EC"],
+    [
+      /^(HC|HD)/,
+      "EC"
+    ],
 
-    [/^(YV|YW|YY)/, "VE"],
+    [
+      /^(YV|YW|YY)/,
+      "VE"
+    ],
 
-    [/^(HK|HJ)/, "CO"],
+    [
+      /^(HK|HJ)/,
+      "CO"
+    ],
 
-    [/^(FY)/, "GF"],
+    [
+      /^FY/,
+      "GF"
+    ],
 
-    [/^(8R)/, "GY"],
+    [
+      /^8R/,
+      "GY"
+    ],
 
-    [/^(PZ)/, "SR"]
+    [
+      /^PZ/,
+      "SR"
+    ]
 
   ];
 
+
   const found =
-    rules.find(([re]) =>
-      re.test(c)
+    rules.find(
+      ([re]) =>
+        re.test(c)
     );
+
 
   return found
     ? found[1]
     : "DX";
+
 }
 
 
-/*
- * ============================================================
+/* ============================================================
  * GREEN API
- * ============================================================
- */
+ * ============================================================ */
 
 function whatsappConfigured() {
 
@@ -245,13 +299,20 @@ function whatsappConfigured() {
 }
 
 
+/*
+ * No mostramos el destino completo en /health.
+ */
+
 function safeDestinationLabel() {
 
-  if (!WHATSAPP_CHAT_ID) {
+  if (
+    !WHATSAPP_CHAT_ID
+  ) {
 
     return "not configured";
 
   }
+
 
   if (
     WHATSAPP_CHAT_ID.endsWith(
@@ -262,6 +323,7 @@ function safeDestinationLabel() {
     return "group configured";
 
   }
+
 
   if (
     WHATSAPP_CHAT_ID.endsWith(
@@ -275,11 +337,15 @@ function safeDestinationLabel() {
         ""
       );
 
+
     return number.length >= 4
+
       ? `***${number.slice(-4)}@c.us`
+
       : "private chat configured";
 
   }
+
 
   return "configured";
 
@@ -287,18 +353,24 @@ function safeDestinationLabel() {
 
 
 /*
- * ENVÍO DIRECTO GREEN API
+ * ENVÍO DIRECTO A GREEN API
  */
 
-async function greenApiSend(message) {
+async function greenApiSend(
+  message
+) {
 
-  if (!whatsappConfigured()) {
+  if (
+    !whatsappConfigured()
+  ) {
 
     return {
 
-      ok: false,
+      ok:
+        false,
 
-      skipped: true,
+      skipped:
+        true,
 
       reason:
         "WHATSAPP_NOT_CONFIGURED"
@@ -306,6 +378,7 @@ async function greenApiSend(message) {
     };
 
   }
+
 
   const endpoint =
 
@@ -323,7 +396,8 @@ async function greenApiSend(message) {
 
       {
 
-        method: "POST",
+        method:
+          "POST",
 
         headers: {
 
@@ -332,17 +406,18 @@ async function greenApiSend(message) {
 
         },
 
-        body: JSON.stringify({
+        body:
+          JSON.stringify({
 
-          chatId:
-            WHATSAPP_CHAT_ID,
+            chatId:
+              WHATSAPP_CHAT_ID,
 
-          message,
+            message,
 
-          linkPreview:
-            true
+            linkPreview:
+              true
 
-        })
+          })
 
       }
 
@@ -353,7 +428,7 @@ async function greenApiSend(message) {
     await response.text();
 
 
-  let body = null;
+  let body;
 
 
   try {
@@ -364,13 +439,18 @@ async function greenApiSend(message) {
   } catch (_) {
 
     body = {
-      raw: text
+
+      raw:
+        text
+
     };
 
   }
 
 
-  if (!response.ok) {
+  if (
+    !response.ok
+  ) {
 
     throw new Error(
 
@@ -383,28 +463,26 @@ async function greenApiSend(message) {
   }
 
 
-  whatsappLastError = "";
+  whatsappLastError =
+    "";
 
 
   return {
 
-    ok: true,
+    ok:
+      true,
 
-    response: body
+    response:
+      body
 
   };
 
 }
 
 
-/*
- * ============================================================
+/* ============================================================
  * COLA WHATSAPP
- * ============================================================
- *
- * Si aparecen dos estaciones casi simultáneamente,
- * los mensajes se envían secuencialmente.
- */
+ * ============================================================ */
 
 function enqueueWhatsapp(
   message,
@@ -425,10 +503,13 @@ function enqueueWhatsapp(
             );
 
 
-          if (result.ok) {
+          if (
+            result.ok
+          ) {
 
             if (
-              kind === "alert"
+              kind ===
+              "alert"
             ) {
 
               whatsappSentAlerts++;
@@ -440,7 +521,8 @@ function enqueueWhatsapp(
 
 
             if (
-              kind === "digest"
+              kind ===
+              "digest"
             ) {
 
               whatsappSentDigests++;
@@ -478,7 +560,8 @@ function enqueueWhatsapp(
 
           return {
 
-            ok: false,
+            ok:
+              false,
 
             error:
               error.message
@@ -495,11 +578,9 @@ function enqueueWhatsapp(
 }
 
 
-/*
- * ============================================================
- * MENSAJE ALERTA 7033
- * ============================================================
- */
+/* ============================================================
+ * MENSAJE DE ALERTA 7033
+ * ============================================================ */
 
 function formatChannelAlert(
   spot
@@ -522,7 +603,7 @@ function formatChannelAlert(
 
   return [
 
-    "🚨 *CW LATAM · 7.033 MHz*",
+    "🚨 *CW LATAM · ALERTA 7.033 MHz*",
 
     "",
 
@@ -541,15 +622,17 @@ function formatChannelAlert(
 }
 
 
-/*
- * ============================================================
- * ALERTA 7033
- * ============================================================
- */
+/* ============================================================
+ * ALERTA INSTANTÁNEA 7033
+ * ============================================================ */
 
 function maybeSendChannelWhatsapp(
   spot
 ) {
+
+  /*
+   * WhatsApp SOLO para 7033.
+   */
 
   if (
     !spot ||
@@ -578,13 +661,16 @@ function maybeSendChannelWhatsapp(
 
 
   /*
-   * MISMO CALL:
+   * Mismo CALL:
    * máximo una alerta cada 10 minutos.
    */
 
   if (
+
     Date.now() - last <
+
     WHATSAPP_ALERT_COOLDOWN_MS
+
   ) {
 
     return;
@@ -621,17 +707,17 @@ function maybeSendChannelWhatsapp(
 }
 
 
-/*
- * ============================================================
+/* ============================================================
  * ESTADÍSTICAS HORARIAS
- * ============================================================
- */
+ * ============================================================ */
 
 function recordWhatsappHour(
   spot
 ) {
 
-  if (!spot) {
+  if (
+    !spot
+  ) {
 
     return;
 
@@ -706,11 +792,9 @@ function resetWhatsappHour() {
 }
 
 
-/*
- * ============================================================
+/* ============================================================
  * DIGEST HORARIO
- * ============================================================
- */
+ * ============================================================ */
 
 function formatWhatsappDigest() {
 
@@ -720,11 +804,11 @@ function formatWhatsappDigest() {
 
     "",
 
-    `📡 ${whatsappHour.calls.size} estaciones`,
+    `📡 ${whatsappHour.calls.size} estaciones activas`,
 
     `📶 ${whatsappHour.spots} spots válidos`,
 
-    `🚨 ${whatsappHour.channelCalls.size} llamadas en 7.033`,
+    `🚨 ${whatsappHour.channelCalls.size} estaciones en 7.033`,
 
     `👂 ${whatsappHour.spotters.size} receptores SA`,
 
@@ -742,8 +826,7 @@ function formatWhatsappDigest() {
 async function sendWhatsappDigest() {
 
   /*
-   * No mandamos mensajes si
-   * no hubo actividad.
+   * No mandamos resumen vacío.
    */
 
   if (
@@ -781,9 +864,7 @@ async function sendWhatsappDigest() {
 
 
 /*
- * ============================================================
- * LIMPIEZA COOLDOWN
- * ============================================================
+ * Limpiar mapa de cooldown de WhatsApp.
  */
 
 setInterval(
@@ -823,9 +904,7 @@ setInterval(
 
 
 /*
- * ============================================================
- * DIGEST CADA HORA
- * ============================================================
+ * Digest cada 60 minutos.
  */
 
 setInterval(
@@ -837,103 +916,124 @@ setInterval(
 );
 
 
-/*
- * ============================================================
- * WEBSOCKET
- * ============================================================
- */
+/* ============================================================
+ * BROADCAST WEBSOCKET
+ * ============================================================ */
 
-function broadcast(data) {
+function broadcast(
+  obj
+) {
 
-  const payload =
-    JSON.stringify(data);
+  const data =
+    JSON.stringify(
+      obj
+    );
 
 
   for (
-    const client
-    of wss.clients
+    const ws
+    of clients
   ) {
 
     if (
-      client.readyState === 1
+      ws.readyState === 1
     ) {
 
-      client.send(
-        payload
-      );
+      try {
 
-    }
+        ws.send(
+          data
+        );
 
-  }
+      } catch (error) {
 
-}
+        console.error(
 
+          "WebSocket send:",
 
-wss.on(
-  "connection",
+          error.message
 
-  ws => {
-
-    console.log(
-      "WS cliente conectado"
-    );
-
-
-    ws.send(
-
-      JSON.stringify({
-
-        type:
-          "status",
-
-        status:
-          "connected",
-
-        rbnConnected,
-
-        timestamp:
-          Date.now()
-
-      })
-
-    );
-
-
-    ws.on(
-      "close",
-
-      () => {
-
-        console.log(
-          "WS cliente desconectado"
         );
 
       }
 
-    );
+    }
 
   }
 
-);
+}
 
 
-/*
- * ============================================================
+/* ============================================================
+ * HISTORIAL 10 MIN
+ * ============================================================ */
+
+function pruneHistory() {
+
+  const cutoff =
+    Date.now() -
+    HISTORY_MS;
+
+
+  while (
+
+    history.length &&
+
+    history[0].ts <
+    cutoff
+
+  ) {
+
+    history.shift();
+
+  }
+
+}
+
+
+function rememberSpot(
+  spot
+) {
+
+  history.push(
+    spot
+  );
+
+
+  pruneHistory();
+
+}
+
+
+/* ============================================================
  * PARSER RBN
- * ============================================================
- *
- * Reverse Beacon Network entrega líneas DX cluster.
- *
- * Ejemplo aproximado:
- *
- * DX de W3LPL-#: 7033.0 ZP5DXS CW 15 dB 18 WPM CQ
- */
+ * ============================================================ */
 
-function parseRbnLine(line) {
+function parseRbnLine(
+  raw
+) {
+
+  const line =
+    String(raw || "")
+
+      .replace(
+        /\r/g,
+        ""
+      )
+
+      .trim();
+
+
+  const match =
+    line.match(
+
+      /^DX de\s+([^:]+):\s+([0-9.]+)\s+(\S+)\s+(CW)\s+(-?\d+)\s+dB\s+(\d+)\s+WPM\s+(.+?)\s+([0-2]\d[0-5]\d)Z$/i
+
+    );
+
 
   if (
-    !line ||
-    !line.includes("DX de")
+    !match
   ) {
 
     return null;
@@ -941,244 +1041,220 @@ function parseRbnLine(line) {
   }
 
 
-  try {
-
-    const normalized =
-      line
-        .replace(/\s+/g, " ")
-        .trim();
-
-
-    /*
-     * Extraemos spotter
-     */
-
-    const spotterMatch =
-      normalized.match(
-        /DX de\s+([A-Z0-9\/\-#]+):/i
-      );
-
-
-    if (!spotterMatch) {
-
-      return null;
-
-    }
-
-
-    let spotter =
-      cleanCall(
-        spotterMatch[1]
-          .replace(/-#$/, "")
-      );
-
-
-    /*
-     * Parte posterior a :
-     */
-
-    const afterColon =
-      normalized.split(":")
-        .slice(1)
-        .join(":")
-        .trim();
-
-
-    const parts =
-      afterColon.split(" ");
-
-
-    if (
-      parts.length < 2
-    ) {
-
-      return null;
-
-    }
-
-
-    const freq =
-      Number(
-        parts[0]
-      );
-
-
-    const dx =
-      cleanCall(
-        parts[1]
-      );
-
-
-    if (
-      !Number.isFinite(freq) ||
-      !dx
-    ) {
-
-      return null;
-
-    }
-
-
-    /*
-     * Solamente 40 metros
-     */
-
-    if (
-      freq < 7000 ||
-      freq > 7060
-    ) {
-
-      return null;
-
-    }
-
-
-    /*
-     * Buscar SNR
-     */
-
-    let snr = null;
-
-    const snrMatch =
-      normalized.match(
-        /(-?\d+)\s+dB/i
-      );
-
-
-    if (snrMatch) {
-
-      snr =
-        Number(
-          snrMatch[1]
-        );
-
-    }
-
-
-    /*
-     * Buscar WPM
-     */
-
-    let wpm = null;
-
-    const wpmMatch =
-      normalized.match(
-        /(\d+)\s+WPM/i
-      );
-
-
-    if (wpmMatch) {
-
-      wpm =
-        Number(
-          wpmMatch[1]
-        );
-
-    }
-
-
-    /*
-     * CQ
-     */
-
-    const isCQ =
-      /\bCQ\b/i.test(
-        normalized
-      );
-
-
-    /*
-     * Canal especial 7033
-     */
-
-    const isChannel =
-
-      freq >= 7032.9 &&
-
-      freq <= 7033.1;
-
-
-    return {
-
-      type:
-        "spot",
-
-      seq:
-        ++spotSequence,
-
-      dx,
-
-      spotter,
-
-      freq,
-
-      actualFreq:
-        freq,
-
-      snr,
-
-      wpm:
-        Number.isFinite(wpm)
-          ? wpm
-          : 0,
-
-      isCQ,
-
-      isChannel,
-
-      timestamp:
-        Date.now(),
-
-      raw:
-        normalized
-
-    };
-
-  } catch (error) {
-
-    console.error(
-
-      "parseRbnLine:",
-
-      error.message
-
+  const spotter =
+    cleanCall(
+      match[1]
     );
 
+
+  const actualFreq =
+    Number(
+      match[2]
+    );
+
+
+  const dx =
+    cleanCall(
+      match[3]
+    );
+
+
+  const mode =
+    match[4]
+      .toUpperCase();
+
+
+  const snr =
+    Number(
+      match[5]
+    );
+
+
+  const wpm =
+    Number(
+      match[6]
+    );
+
+
+  const activity =
+    match[7]
+      .trim()
+      .toUpperCase();
+
+
+  const rbnUtc =
+    match[8];
+
+
+  /*
+   * FILTROS
+   */
+
+  if (
+    mode !== "CW"
+  ) {
 
     return null;
 
   }
 
-}
 
+  if (
+    activity !== "CQ"
+  ) {
 
-/*
- * ============================================================
- * CONEXIÓN RBN
- * ============================================================
- */
-
-function connectRbn() {
-
-  if (rbnSocket) {
-
-    try {
-
-      rbnSocket.destroy();
-
-    } catch (_) {}
+    return null;
 
   }
 
 
+  /*
+   * Banda completa de 40 m.
+   */
+
+  if (
+
+    actualFreq < 7000 ||
+
+    actualFreq > 7300
+
+  ) {
+
+    return null;
+
+  }
+
+
+  /*
+   * El spotter debe estar en SA.
+   */
+
+  if (
+    !isSouthAmericaSpotter(
+      spotter
+    )
+  ) {
+
+    return null;
+
+  }
+
+
+  /*
+   * CANAL 7033
+   */
+
+  const isChannel =
+
+    actualFreq >= 7032.9 &&
+
+    actualFreq <= 7033.1;
+
+
+  const freq =
+
+    isChannel
+
+      ? 7033.0
+
+      : actualFreq;
+
+
+  /*
+   * Secuencia monotónica.
+   */
+
+  spotSequence++;
+
+
+  return {
+
+    seq:
+      spotSequence,
+
+    source:
+      "RBN",
+
+    ts:
+      Date.now(),
+
+    spotter,
+
+    dx,
+
+    freq,
+
+    actualFreq,
+
+    isChannel,
+
+    snr,
+
+    wpm,
+
+    type:
+      "CQ",
+
+    mode:
+      "CW",
+
+    rbnUtc
+
+  };
+
+}
+
+
+/* ============================================================
+ * RECONEXIÓN RBN
+ * ============================================================ */
+
+function scheduleRbnReconnect() {
+
+  clearTimeout(
+    reconnectTimer
+  );
+
+
+  reconnectTimer =
+    setTimeout(
+
+      connectRbn,
+
+      3000
+
+    );
+
+}
+
+
+/* ============================================================
+ * TELNET RBN
+ * ============================================================ */
+
+function connectRbn() {
+
+  clearTimeout(
+    reconnectTimer
+  );
+
+
+  buffer =
+    "";
+
+
+  rbnConnected =
+    false;
+
+
   console.log(
 
-    `Conectando RBN ${RBN_HOST}:${RBN_PORT}...`
+    `Conectando ${RBN_HOST}:${RBN_PORT} como ${RBN_LOGIN}...`
 
   );
 
 
-  const socket =
+  rbn =
     net.createConnection({
 
       host:
@@ -1190,19 +1266,26 @@ function connectRbn() {
     });
 
 
-  rbnSocket =
-    socket;
-
-
-  let buffer = "";
-
-
-  socket.setEncoding(
-    "utf8"
+  rbn.setNoDelay(
+    true
   );
 
 
-  socket.on(
+  rbn.setKeepAlive(
+
+    true,
+
+    20000
+
+  );
+
+
+  /*
+   * CONECTADO
+   */
+
+  rbn.on(
+
     "connect",
 
     () => {
@@ -1211,39 +1294,54 @@ function connectRbn() {
         true;
 
 
+      lastRbnDataAt =
+        Date.now();
+
+
       console.log(
-        "RBN conectado"
+        "RBN TCP conectado"
       );
 
 
-      /*
-       * Login
-       */
+      setTimeout(
 
-      socket.write(
-        `${RBN_LOGIN}\r\n`
+        () => {
+
+          if (
+
+            rbn &&
+
+            !rbn.destroyed
+
+          ) {
+
+            rbn.write(
+
+              RBN_LOGIN +
+
+              "\r\n"
+
+            );
+
+          }
+
+        },
+
+        700
+
       );
-
-
-      broadcast({
-
-        type:
-          "status",
-
-        status:
-          "rbn_connected",
-
-        timestamp:
-          Date.now()
-
-      });
 
     }
 
   );
 
 
-  socket.on(
+  /*
+   * STREAM RBN
+   */
+
+  rbn.on(
+
     "data",
 
     chunk => {
@@ -1253,12 +1351,14 @@ function connectRbn() {
 
 
       buffer +=
-        chunk;
+        chunk.toString(
+          "utf8"
+        );
 
 
       const lines =
         buffer.split(
-          /\r?\n/
+          /\n/
         );
 
 
@@ -1277,23 +1377,28 @@ function connectRbn() {
           );
 
 
-        if (!spot) {
-
-          rejectedSpots++;
+        if (
+          !spot
+        ) {
 
           continue;
 
         }
 
 
-        acceptedSpots++;
+        /*
+         * 1.
+         * Guardar historial.
+         */
 
-        lastAcceptedSpotAt =
-          Date.now();
+        rememberSpot(
+          spot
+        );
 
 
         /*
-         * WEB
+         * 2.
+         * Enviar a la web.
          */
 
         broadcast(
@@ -1302,7 +1407,8 @@ function connectRbn() {
 
 
         /*
-         * DIGEST
+         * 3.
+         * Estadística digest.
          */
 
         recordWhatsappHour(
@@ -1311,14 +1417,40 @@ function connectRbn() {
 
 
         /*
-         * WHATSAPP
-         *
-         * EXCLUSIVAMENTE
-         * 7032.9–7033.1
+         * 4.
+         * WhatsApp solamente 7033.
          */
 
         maybeSendChannelWhatsapp(
           spot
+        );
+
+
+        const mark =
+
+          spot.isChannel
+
+            ? " *** 7033 ***"
+
+            : "";
+
+
+        console.log(
+
+          `LIVE #${spot.seq} ` +
+
+          `${spot.spotter} -> ` +
+
+          `${spot.dx} ` +
+
+          `${spot.actualFreq.toFixed(2)} ` +
+
+          `${spot.snr} dB ` +
+
+          `${spot.wpm} WPM` +
+
+          mark
+
         );
 
       }
@@ -1328,7 +1460,12 @@ function connectRbn() {
   );
 
 
-  socket.on(
+  /*
+   * ERROR
+   */
+
+  rbn.on(
+
     "error",
 
     error => {
@@ -1346,43 +1483,26 @@ function connectRbn() {
   );
 
 
-  socket.on(
+  /*
+   * CLOSE
+   */
+
+  rbn.on(
+
     "close",
 
     () => {
+
+      console.log(
+        "RBN desconectado"
+      );
+
 
       rbnConnected =
         false;
 
 
-      console.log(
-
-        "RBN desconectado. Reconectando..."
-
-      );
-
-
-      broadcast({
-
-        type:
-          "status",
-
-        status:
-          "rbn_disconnected",
-
-        timestamp:
-          Date.now()
-
-      });
-
-
-      setTimeout(
-
-        connectRbn,
-
-        5000
-
-      );
+      scheduleRbnReconnect();
 
     }
 
@@ -1391,120 +1511,488 @@ function connectRbn() {
 }
 
 
-/*
- * ============================================================
- * HEALTH
- * ============================================================
- */
+/* ============================================================
+ * WATCHDOG RBN
+ * ============================================================ */
 
-app.get(
+setInterval(
 
-  "/health",
+  () => {
 
-  (req, res) => {
+    if (
 
-    res.json({
+      !rbn ||
 
-      ok:
-        true,
+      rbn.destroyed ||
 
-      service:
-        "CW LATAM",
+      !rbnConnected
 
-      timestamp:
-        Date.now(),
+    ) {
 
-      rbn: {
+      return;
 
-        connected:
-          rbnConnected,
+    }
 
-        login:
-          RBN_LOGIN,
 
-        acceptedSpots,
+    const silentFor =
 
-        rejectedSpots,
+      Date.now() -
 
-        lastDataAt:
-          lastRbnDataAt || null,
+      lastRbnDataAt;
 
-        lastAcceptedSpotAt:
-          lastAcceptedSpotAt || null,
 
-        band:
-          "7000-7060",
+    if (
 
-        channel:
-          "7032.9-7033.1"
+      silentFor >
 
-      },
+      RBN_WATCHDOG_MS
 
-      websocket: {
+    ) {
 
-        clients:
-          wss.clients.size
+      console.warn(
 
-      },
+        "RBN sin datos 90 s. Reconectando..."
 
-      whatsapp: {
+      );
 
-        enabled:
-          WHATSAPP_ENABLED,
 
-        configured:
-          whatsappConfigured(),
+      try {
 
-        destination:
-          safeDestinationLabel(),
+        rbn.destroy();
 
-        provider:
-          "GREEN API",
+      } catch (_) {}
 
-        alertCooldownMinutes:
-          10,
+    }
 
-        digestMinutes:
-          60,
+  },
 
-        sentAlerts:
-          whatsappSentAlerts,
-
-        sentDigests:
-          whatsappSentDigests,
-
-        lastAlertAt:
-          whatsappLastAlertAt || null,
-
-        lastDigestAt:
-          whatsappLastDigestAt || null,
-
-        lastError:
-          whatsappLastError || null
-
-      }
-
-    });
-
-  }
+  15000
 
 );
 
 
-/*
- * ============================================================
- * ROOT
- * ============================================================
- */
+/* ============================================================
+ * CORS
+ * ============================================================ */
 
-app.get(
+function corsHeaders(
+  extra = {}
+) {
 
-  "/",
+  return {
 
-  (req, res) => {
+    "access-control-allow-origin":
+      "*",
 
-    res.send(
-      "CW LATAM relay online"
+    "cache-control":
+      "no-store, no-cache, must-revalidate",
+
+    ...extra
+
+  };
+
+}
+
+
+/* ============================================================
+ * HTTP
+ * ============================================================ */
+
+const server =
+  http.createServer(
+
+    (req, res) => {
+
+      const url =
+        new URL(
+
+          req.url,
+
+          `http://${req.headers.host || "localhost"}`
+
+        );
+
+
+      /*
+       * ======================================================
+       * /spots
+       *
+       * /spots?after=123
+       * ======================================================
+       */
+
+      if (
+        url.pathname ===
+        "/spots"
+      ) {
+
+        pruneHistory();
+
+
+        let after =
+          Number(
+
+            url.searchParams.get(
+              "after"
+            ) || 0
+
+          );
+
+
+        if (
+
+          !Number.isFinite(
+            after
+          ) ||
+
+          after < 0
+
+        ) {
+
+          after =
+            0;
+
+        }
+
+
+        const result =
+          history.filter(
+
+            spot =>
+              spot.seq >
+              after
+
+          );
+
+
+        res.writeHead(
+
+          200,
+
+          corsHeaders({
+
+            "content-type":
+              "application/json; charset=utf-8"
+
+          })
+
+        );
+
+
+        res.end(
+
+          JSON.stringify({
+
+            ok:
+              true,
+
+            spots:
+              result,
+
+            lastSeq:
+              spotSequence,
+
+            serverTime:
+              Date.now()
+
+          })
+
+        );
+
+
+        return;
+
+      }
+
+
+      /*
+       * ======================================================
+       * /health
+       * ======================================================
+       */
+
+      if (
+        url.pathname ===
+        "/health"
+      ) {
+
+        pruneHistory();
+
+
+        res.writeHead(
+
+          200,
+
+          corsHeaders({
+
+            "content-type":
+              "application/json; charset=utf-8"
+
+          })
+
+        );
+
+
+        res.end(
+
+          JSON.stringify({
+
+            ok:
+              true,
+
+            live:
+              rbnConnected,
+
+            websocketClients:
+              clients.size,
+
+            historySpots:
+              history.length,
+
+            lastSeq:
+              spotSequence,
+
+            historyMinutes:
+              10,
+
+            secondsSinceRbnData:
+
+              lastRbnDataAt
+
+                ? Math.round(
+
+                    (
+                      Date.now() -
+                      lastRbnDataAt
+                    ) / 1000
+
+                  )
+
+                : null,
+
+            channel:
+              "7032.9-7033.1",
+
+            whatsapp: {
+
+              enabled:
+                WHATSAPP_ENABLED,
+
+              configured:
+                whatsappConfigured(),
+
+              destination:
+                safeDestinationLabel(),
+
+              provider:
+                "GREEN API",
+
+              alertCooldownMinutes:
+                10,
+
+              digestMinutes:
+                60,
+
+              sentAlerts:
+                whatsappSentAlerts,
+
+              sentDigests:
+                whatsappSentDigests,
+
+              lastAlertAt:
+                whatsappLastAlertAt || null,
+
+              lastDigestAt:
+                whatsappLastDigestAt || null,
+
+              lastError:
+                whatsappLastError || null
+
+            }
+
+          })
+
+        );
+
+
+        return;
+
+      }
+
+
+      /*
+       * ROOT
+       */
+
+      res.writeHead(
+
+        200,
+
+        corsHeaders({
+
+          "content-type":
+            "text/plain; charset=utf-8"
+
+        })
+
+      );
+
+
+      res.end(
+
+        "CW LATAM relay LIVE\n"
+
+      );
+
+    }
+
+  );
+
+
+/* ============================================================
+ * WEBSOCKET
+ * ============================================================ */
+
+const wss =
+  new WebSocketServer({
+
+    server,
+
+    perMessageDeflate:
+      false
+
+  });
+
+
+wss.on(
+
+  "connection",
+
+  ws => {
+
+    ws.isAlive =
+      true;
+
+
+    /*
+     * PONG
+     */
+
+    ws.on(
+
+      "pong",
+
+      () => {
+
+        ws.isAlive =
+          true;
+
+      }
+
+    );
+
+
+    clients.add(
+      ws
+    );
+
+
+    console.log(
+
+      `Navegador conectado. Total: ${clients.size}`
+
+    );
+
+
+    /*
+     * ESTADO
+     */
+
+    ws.send(
+
+      JSON.stringify({
+
+        type:
+          "status",
+
+        live:
+          rbnConnected,
+
+        ts:
+          Date.now()
+
+      })
+
+    );
+
+
+    /*
+     * HISTORIAL
+     */
+
+    pruneHistory();
+
+
+    ws.send(
+
+      JSON.stringify({
+
+        type:
+          "history",
+
+        spots:
+          history,
+
+        lastSeq:
+          spotSequence
+
+      })
+
+    );
+
+
+    /*
+     * CLOSE
+     */
+
+    ws.on(
+
+      "close",
+
+      () => {
+
+        clients.delete(
+          ws
+        );
+
+
+        console.log(
+
+          `Navegador desconectado. Total: ${clients.size}`
+
+        );
+
+      }
+
+    );
+
+
+    /*
+     * ERROR
+     */
+
+    ws.on(
+
+      "error",
+
+      () => {
+
+        clients.delete(
+          ws
+        );
+
+      }
+
     );
 
   }
@@ -1512,11 +2000,129 @@ app.get(
 );
 
 
-/*
- * ============================================================
+/* ============================================================
+ * HEARTBEAT WEBSOCKET
+ * ============================================================ */
+
+const websocketHeartbeat =
+  setInterval(
+
+    () => {
+
+      for (
+        const ws
+        of clients
+      ) {
+
+        if (
+          ws.isAlive ===
+          false
+        ) {
+
+          clients.delete(
+            ws
+          );
+
+
+          try {
+
+            ws.terminate();
+
+          } catch (_) {}
+
+
+          continue;
+
+        }
+
+
+        ws.isAlive =
+          false;
+
+
+        try {
+
+          ws.ping();
+
+        } catch (_) {
+
+          clients.delete(
+            ws
+          );
+
+
+          try {
+
+            ws.terminate();
+
+          } catch (_) {}
+
+        }
+
+      }
+
+    },
+
+    WS_HEARTBEAT_MS
+
+  );
+
+
+/* ============================================================
+ * HEARTBEAT DE APLICACIÓN
+ * ============================================================ */
+
+const applicationHeartbeat =
+  setInterval(
+
+    () => {
+
+      broadcast({
+
+        type:
+          "heartbeat",
+
+        ts:
+          Date.now(),
+
+        live:
+          rbnConnected,
+
+        lastSeq:
+          spotSequence
+
+      });
+
+    },
+
+    APP_HEARTBEAT_MS
+
+  );
+
+
+wss.on(
+
+  "close",
+
+  () => {
+
+    clearInterval(
+      websocketHeartbeat
+    );
+
+
+    clearInterval(
+      applicationHeartbeat
+    );
+
+  }
+
+);
+
+
+/* ============================================================
  * ARRANQUE
- * ============================================================
- */
+ * ============================================================ */
 
 server.listen(
 
