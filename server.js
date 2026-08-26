@@ -1,349 +1,1251 @@
 const net = require("net");
+const express = require("express");
 const http = require("http");
 const { WebSocketServer } = require("ws");
 
-const PORT = Number(process.env.PORT || 3000);
+const PORT = process.env.PORT || 10000;
 
+/*
+ * ============================================================
+ * CW LATAM — RBN RELAY + GREEN API WHATSAPP
+ * ============================================================
+ */
+
+/*
+ * RBN
+ */
 const RBN_HOST = "telnet.reversebeacon.net";
 const RBN_PORT = 7000;
+
 const RBN_LOGIN = String(
   process.env.RBN_LOGIN || "ZP5DXS"
 ).trim();
 
-const HISTORY_MS = 10 * 60 * 1000;
-
-const RBN_WATCHDOG_MS = 90 * 1000;
-const WS_HEARTBEAT_MS = 20 * 1000;
-const APP_HEARTBEAT_MS = 15 * 1000;
-
-const clients = new Set();
-const history = [];
-
-let rbn = null;
-let buffer = "";
-let reconnectTimer = null;
-
-let lastRbnDataAt = 0;
-let rbnConnected = false;
 
 /*
- * Número secuencial de cada spot.
- * Permite al navegador pedir:
+ * ============================================================
+ * GREEN API / WHATSAPP
+ * ============================================================
  *
- * "dame solamente lo posterior al spot 1234"
+ * CONFIGURAR EN RENDER:
+ *
+ * GREEN_API_URL=https://7107.api.greenapi.com
+ * GREEN_ID_INSTANCE=710722718606
+ * GREEN_API_TOKEN=TU_TOKEN
+ *
+ * WHATSAPP_CHAT_ID=120363409458161118@g.us
+ * WHATSAPP_ENABLED=true
+ *
+ * CW_LATAM_URL=https://zp5dxs.github.io/CW-LATAM/
+ *
+ * IMPORTANTE:
+ * El token NO debe escribirse dentro de este archivo.
  */
+
+const GREEN_API_URL = String(
+  process.env.GREEN_API_URL || ""
+)
+  .trim()
+  .replace(/\/+$/, "");
+
+const GREEN_ID_INSTANCE = String(
+  process.env.GREEN_ID_INSTANCE || ""
+).trim();
+
+const GREEN_API_TOKEN = String(
+  process.env.GREEN_API_TOKEN || ""
+).trim();
+
+const WHATSAPP_CHAT_ID = String(
+  process.env.WHATSAPP_CHAT_ID || ""
+).trim();
+
+const WHATSAPP_ENABLED =
+  String(
+    process.env.WHATSAPP_ENABLED || "false"
+  )
+    .trim()
+    .toLowerCase() === "true";
+
+const CW_LATAM_URL = String(
+  process.env.CW_LATAM_URL ||
+    "https://zp5dxs.github.io/CW-LATAM/"
+).trim();
+
+
+/*
+ * ============================================================
+ * CONFIGURACIÓN WHATSAPP
+ * ============================================================
+ */
+
+const WHATSAPP_ALERT_COOLDOWN_MS =
+  10 * 60 * 1000;
+
+const WHATSAPP_DIGEST_MS =
+  60 * 60 * 1000;
+
+
+/*
+ * ============================================================
+ * EXPRESS / HTTP / WEBSOCKET
+ * ============================================================
+ */
+
+const app = express();
+const server = http.createServer(app);
+
+const wss = new WebSocketServer({
+  server
+});
+
+
+/*
+ * ============================================================
+ * ESTADO GENERAL
+ * ============================================================
+ */
+
+let rbnSocket = null;
+let rbnConnected = false;
+
+let lastRbnDataAt = 0;
+let lastAcceptedSpotAt = 0;
+
+let acceptedSpots = 0;
+let rejectedSpots = 0;
+
 let spotSequence = 0;
 
 
 /*
- * SPOTTERS SUDAMÉRICA
+ * ============================================================
+ * ESTADO WHATSAPP
+ * ============================================================
  */
-const SA_PREFIXES = [
-  "LU", "LW", "AY", "AZ",
-  "LO", "LP", "LQ", "LR",
-  "LS", "LT", "LV",
 
-  "CX",
-  "ZP",
+const whatsappAlertedCalls =
+  new Map();
 
-  "PY", "PP", "PQ", "PR",
-  "PS", "PT", "PU", "PV",
-  "PW", "PX", "ZY", "ZZ",
+const whatsappHour = {
+  startedAt: Date.now(),
 
-  "CE", "CA", "CB", "CC",
-  "CD", "XQ",
+  spots: 0,
 
-  "OA", "OB",
-  "CP",
+  calls: new Set(),
 
-  "HC", "HD",
+  channelCalls: new Set(),
 
-  "YV", "YW", "YY",
+  spotters: new Set(),
 
-  "HK", "HJ",
+  countries: new Set()
+};
 
-  "FY",
-  "8R",
-  "PZ",
+let whatsappQueue =
+  Promise.resolve();
 
-  "9Y", "9Z",
-  "P4",
+let whatsappLastAlertAt = 0;
+let whatsappLastDigestAt = 0;
 
-  "PJ2", "PJ4", "PJ9",
+let whatsappLastError = "";
 
-  "VP8"
-];
+let whatsappSentAlerts = 0;
+let whatsappSentDigests = 0;
 
+
+/*
+ * ============================================================
+ * UTILIDADES
+ * ============================================================
+ */
 
 function cleanCall(call) {
   return String(call || "")
+    .trim()
     .toUpperCase()
-    .replace(/-#$/, "")
-    .trim();
+    .replace(/[^A-Z0-9/]/g, "");
 }
 
 
-function isSouthAmericaSpotter(call) {
+function roughCountry(call) {
   const c = cleanCall(call);
 
-  return SA_PREFIXES.some(
-    prefix => c.startsWith(prefix)
-  );
+  const rules = [
+
+    [/^(ZP)/, "PY"],
+
+    [
+      /^(LU|LW|AY|AZ|LO|LP|LQ|LR|LS|LT|LV)/,
+      "AR"
+    ],
+
+    [/^(CX)/, "UY"],
+
+    [
+      /^(PY|PP|PQ|PR|PS|PT|PU|PV|PW|PX|ZY|ZZ)/,
+      "BR"
+    ],
+
+    [
+      /^(CE|CA|CB|CC|CD|XQ)/,
+      "CL"
+    ],
+
+    [/^(OA|OB)/, "PE"],
+
+    [/^(CP)/, "BO"],
+
+    [/^(HC|HD)/, "EC"],
+
+    [/^(YV|YW|YY)/, "VE"],
+
+    [/^(HK|HJ)/, "CO"],
+
+    [/^(FY)/, "GF"],
+
+    [/^(8R)/, "GY"],
+
+    [/^(PZ)/, "SR"]
+
+  ];
+
+  const found =
+    rules.find(([re]) =>
+      re.test(c)
+    );
+
+  return found
+    ? found[1]
+    : "DX";
 }
 
 
 /*
- * BROADCAST WEBSOCKET
+ * ============================================================
+ * GREEN API
+ * ============================================================
  */
-function broadcast(obj) {
-  const data = JSON.stringify(obj);
 
-  for (const ws of clients) {
-    if (ws.readyState === 1) {
-      try {
-        ws.send(data);
-      } catch (error) {
-        console.error(
-          "WebSocket send:",
-          error.message
-        );
+function whatsappConfigured() {
+
+  return Boolean(
+
+    WHATSAPP_ENABLED &&
+
+    GREEN_API_URL &&
+
+    GREEN_ID_INSTANCE &&
+
+    GREEN_API_TOKEN &&
+
+    WHATSAPP_CHAT_ID
+
+  );
+
+}
+
+
+function safeDestinationLabel() {
+
+  if (!WHATSAPP_CHAT_ID) {
+
+    return "not configured";
+
+  }
+
+  if (
+    WHATSAPP_CHAT_ID.endsWith(
+      "@g.us"
+    )
+  ) {
+
+    return "group configured";
+
+  }
+
+  if (
+    WHATSAPP_CHAT_ID.endsWith(
+      "@c.us"
+    )
+  ) {
+
+    const number =
+      WHATSAPP_CHAT_ID.replace(
+        "@c.us",
+        ""
+      );
+
+    return number.length >= 4
+      ? `***${number.slice(-4)}@c.us`
+      : "private chat configured";
+
+  }
+
+  return "configured";
+
+}
+
+
+/*
+ * ENVÍO DIRECTO GREEN API
+ */
+
+async function greenApiSend(message) {
+
+  if (!whatsappConfigured()) {
+
+    return {
+
+      ok: false,
+
+      skipped: true,
+
+      reason:
+        "WHATSAPP_NOT_CONFIGURED"
+
+    };
+
+  }
+
+  const endpoint =
+
+    `${GREEN_API_URL}` +
+
+    `/waInstance${GREEN_ID_INSTANCE}` +
+
+    `/sendMessage/${GREEN_API_TOKEN}`;
+
+
+  const response =
+    await fetch(
+
+      endpoint,
+
+      {
+
+        method: "POST",
+
+        headers: {
+
+          "content-type":
+            "application/json; charset=utf-8"
+
+        },
+
+        body: JSON.stringify({
+
+          chatId:
+            WHATSAPP_CHAT_ID,
+
+          message,
+
+          linkPreview:
+            true
+
+        })
+
       }
-    }
-  }
-}
+
+    );
 
 
-/*
- * HISTORIAL 10 MIN
- */
-function pruneHistory() {
-  const cutoff =
-    Date.now() - HISTORY_MS;
-
-  while (
-    history.length &&
-    history[0].ts < cutoff
-  ) {
-    history.shift();
-  }
-}
+  const text =
+    await response.text();
 
 
-function rememberSpot(spot) {
-  history.push(spot);
-  pruneHistory();
-}
+  let body = null;
 
 
-/*
- * PARSER RBN
- */
-function parseRbnLine(raw) {
-  const line = String(raw || "")
-    .replace(/\r/g, "")
-    .trim();
+  try {
 
-  const match = line.match(
-    /^DX de\s+([^:]+):\s+([0-9.]+)\s+(\S+)\s+(CW)\s+(-?\d+)\s+dB\s+(\d+)\s+WPM\s+(.+?)\s+([0-2]\d[0-5]\d)Z$/i
-  );
+    body =
+      JSON.parse(text);
 
-  if (!match) {
-    return null;
-  }
+  } catch (_) {
 
-  const spotter =
-    cleanCall(match[1]);
+    body = {
+      raw: text
+    };
 
-  const actualFreq =
-    Number(match[2]);
-
-  const dx =
-    cleanCall(match[3]);
-
-  const mode =
-    match[4].toUpperCase();
-
-  const snr =
-    Number(match[5]);
-
-  const wpm =
-    Number(match[6]);
-
-  const activity =
-    match[7]
-      .trim()
-      .toUpperCase();
-
-  const rbnUtc =
-    match[8];
-
-
-  /*
-   * FILTROS
-   */
-  if (mode !== "CW") {
-    return null;
-  }
-
-  if (activity !== "CQ") {
-    return null;
-  }
-
-  if (
-    actualFreq < 7000 ||
-    actualFreq > 7300
-  ) {
-    return null;
-  }
-
-  if (
-    !isSouthAmericaSpotter(spotter)
-  ) {
-    return null;
   }
 
 
-  /*
-   * CANAL 7033
-   */
-  const isChannel =
-    actualFreq >= 7032.9 &&
-    actualFreq <= 7033.1;
+  if (!response.ok) {
 
-  const freq =
-    isChannel
-      ? 7033.0
-      : actualFreq;
+    throw new Error(
+
+      `GREEN API HTTP ${response.status}: ` +
+
+      `${text.slice(0, 300)}`
+
+    );
+
+  }
 
 
-  /*
-   * Secuencia monotónica.
-   */
-  spotSequence++;
+  whatsappLastError = "";
 
 
   return {
-    seq:
-      spotSequence,
 
-    source:
-      "RBN",
+    ok: true,
 
-    ts:
-      Date.now(),
+    response: body
 
-    spotter,
-
-    dx,
-
-    freq,
-
-    actualFreq,
-
-    isChannel,
-
-    snr,
-
-    wpm,
-
-    type:
-      "CQ",
-
-    mode:
-      "CW",
-
-    rbnUtc
   };
+
 }
 
 
 /*
- * RECONEXIÓN RBN
+ * ============================================================
+ * COLA WHATSAPP
+ * ============================================================
+ *
+ * Si aparecen dos estaciones casi simultáneamente,
+ * los mensajes se envían secuencialmente.
  */
-function scheduleRbnReconnect() {
-  clearTimeout(reconnectTimer);
 
-  reconnectTimer =
-    setTimeout(
-      connectRbn,
-      3000
+function enqueueWhatsapp(
+  message,
+  kind
+) {
+
+  whatsappQueue =
+
+    whatsappQueue
+
+      .then(
+
+        async () => {
+
+          const result =
+            await greenApiSend(
+              message
+            );
+
+
+          if (result.ok) {
+
+            if (
+              kind === "alert"
+            ) {
+
+              whatsappSentAlerts++;
+
+              whatsappLastAlertAt =
+                Date.now();
+
+            }
+
+
+            if (
+              kind === "digest"
+            ) {
+
+              whatsappSentDigests++;
+
+              whatsappLastDigestAt =
+                Date.now();
+
+            }
+
+          }
+
+
+          return result;
+
+        }
+
+      )
+
+      .catch(
+
+        error => {
+
+          whatsappLastError =
+            error.message;
+
+
+          console.error(
+
+            "WhatsApp:",
+
+            error.message
+
+          );
+
+
+          return {
+
+            ok: false,
+
+            error:
+              error.message
+
+          };
+
+        }
+
+      );
+
+
+  return whatsappQueue;
+
+}
+
+
+/*
+ * ============================================================
+ * MENSAJE ALERTA 7033
+ * ============================================================
+ */
+
+function formatChannelAlert(
+  spot
+) {
+
+  const snr =
+
+    Number.isFinite(
+      Number(spot.snr)
+    )
+
+      ? `${
+          Number(spot.snr) >= 0
+            ? "+"
+            : ""
+        }${spot.snr} dB`
+
+      : "SNR —";
+
+
+  return [
+
+    "🚨 *CW LATAM · 7.033 MHz*",
+
+    "",
+
+    `📡 *${spot.dx}* llamando CQ`,
+
+    `⚡ ${spot.actualFreq.toFixed(2)} kHz · ${spot.wpm} WPM · ${snr}`,
+
+    `👂 Detectado por ${spot.spotter}`,
+
+    "",
+
+    `🔗 ${CW_LATAM_URL}`
+
+  ].join("\n");
+
+}
+
+
+/*
+ * ============================================================
+ * ALERTA 7033
+ * ============================================================
+ */
+
+function maybeSendChannelWhatsapp(
+  spot
+) {
+
+  if (
+    !spot ||
+    !spot.isChannel
+  ) {
+
+    return;
+
+  }
+
+
+  const call =
+    cleanCall(
+      spot.dx
     );
-}
 
 
-/*
- * TELNET
- */
-function connectRbn() {
-  clearTimeout(reconnectTimer);
+  const last =
+    Number(
 
-  buffer = "";
-  rbnConnected = false;
+      whatsappAlertedCalls.get(
+        call
+      ) || 0
+
+    );
+
+
+  /*
+   * MISMO CALL:
+   * máximo una alerta cada 10 minutos.
+   */
+
+  if (
+    Date.now() - last <
+    WHATSAPP_ALERT_COOLDOWN_MS
+  ) {
+
+    return;
+
+  }
+
+
+  whatsappAlertedCalls.set(
+
+    call,
+
+    Date.now()
+
+  );
+
 
   console.log(
-    `Conectando ${RBN_HOST}:${RBN_PORT} como ${RBN_LOGIN}...`
+
+    `WHATSAPP 7033 -> ${call}`
+
   );
 
 
-  rbn = net.createConnection({
-    host:
-      RBN_HOST,
+  enqueueWhatsapp(
 
-    port:
-      RBN_PORT
-  });
+    formatChannelAlert(
+      spot
+    ),
+
+    "alert"
+
+  );
+
+}
 
 
-  rbn.setNoDelay(true);
+/*
+ * ============================================================
+ * ESTADÍSTICAS HORARIAS
+ * ============================================================
+ */
 
-  rbn.setKeepAlive(
-    true,
-    20000
+function recordWhatsappHour(
+  spot
+) {
+
+  if (!spot) {
+
+    return;
+
+  }
+
+
+  whatsappHour.spots++;
+
+
+  whatsappHour.calls.add(
+
+    cleanCall(
+      spot.dx
+    )
+
   );
 
 
-  rbn.on(
+  whatsappHour.spotters.add(
+
+    cleanCall(
+      spot.spotter
+    )
+
+  );
+
+
+  whatsappHour.countries.add(
+
+    roughCountry(
+      spot.dx
+    )
+
+  );
+
+
+  if (
+    spot.isChannel
+  ) {
+
+    whatsappHour.channelCalls.add(
+
+      cleanCall(
+        spot.dx
+      )
+
+    );
+
+  }
+
+}
+
+
+function resetWhatsappHour() {
+
+  whatsappHour.startedAt =
+    Date.now();
+
+
+  whatsappHour.spots =
+    0;
+
+
+  whatsappHour.calls.clear();
+
+  whatsappHour.channelCalls.clear();
+
+  whatsappHour.spotters.clear();
+
+  whatsappHour.countries.clear();
+
+}
+
+
+/*
+ * ============================================================
+ * DIGEST HORARIO
+ * ============================================================
+ */
+
+function formatWhatsappDigest() {
+
+  return [
+
+    "📊 *CW LATAM · ÚLTIMA HORA*",
+
+    "",
+
+    `📡 ${whatsappHour.calls.size} estaciones`,
+
+    `📶 ${whatsappHour.spots} spots válidos`,
+
+    `🚨 ${whatsappHour.channelCalls.size} llamadas en 7.033`,
+
+    `👂 ${whatsappHour.spotters.size} receptores SA`,
+
+    `🌎 ${whatsappHour.countries.size} países / regiones DX`,
+
+    "",
+
+    `🔗 ${CW_LATAM_URL}`
+
+  ].join("\n");
+
+}
+
+
+async function sendWhatsappDigest() {
+
+  /*
+   * No mandamos mensajes si
+   * no hubo actividad.
+   */
+
+  if (
+    whatsappHour.spots <= 0
+  ) {
+
+    resetWhatsappHour();
+
+    return;
+
+  }
+
+
+  const message =
+    formatWhatsappDigest();
+
+
+  resetWhatsappHour();
+
+
+  console.log(
+    "WHATSAPP digest horario"
+  );
+
+
+  await enqueueWhatsapp(
+
+    message,
+
+    "digest"
+
+  );
+
+}
+
+
+/*
+ * ============================================================
+ * LIMPIEZA COOLDOWN
+ * ============================================================
+ */
+
+setInterval(
+
+  () => {
+
+    const now =
+      Date.now();
+
+
+    for (
+      const [call, ts]
+      of whatsappAlertedCalls
+    ) {
+
+      if (
+
+        now - ts >
+
+        WHATSAPP_ALERT_COOLDOWN_MS * 2
+
+      ) {
+
+        whatsappAlertedCalls.delete(
+          call
+        );
+
+      }
+
+    }
+
+  },
+
+  5 * 60 * 1000
+
+);
+
+
+/*
+ * ============================================================
+ * DIGEST CADA HORA
+ * ============================================================
+ */
+
+setInterval(
+
+  sendWhatsappDigest,
+
+  WHATSAPP_DIGEST_MS
+
+);
+
+
+/*
+ * ============================================================
+ * WEBSOCKET
+ * ============================================================
+ */
+
+function broadcast(data) {
+
+  const payload =
+    JSON.stringify(data);
+
+
+  for (
+    const client
+    of wss.clients
+  ) {
+
+    if (
+      client.readyState === 1
+    ) {
+
+      client.send(
+        payload
+      );
+
+    }
+
+  }
+
+}
+
+
+wss.on(
+  "connection",
+
+  ws => {
+
+    console.log(
+      "WS cliente conectado"
+    );
+
+
+    ws.send(
+
+      JSON.stringify({
+
+        type:
+          "status",
+
+        status:
+          "connected",
+
+        rbnConnected,
+
+        timestamp:
+          Date.now()
+
+      })
+
+    );
+
+
+    ws.on(
+      "close",
+
+      () => {
+
+        console.log(
+          "WS cliente desconectado"
+        );
+
+      }
+
+    );
+
+  }
+
+);
+
+
+/*
+ * ============================================================
+ * PARSER RBN
+ * ============================================================
+ *
+ * Reverse Beacon Network entrega líneas DX cluster.
+ *
+ * Ejemplo aproximado:
+ *
+ * DX de W3LPL-#: 7033.0 ZP5DXS CW 15 dB 18 WPM CQ
+ */
+
+function parseRbnLine(line) {
+
+  if (
+    !line ||
+    !line.includes("DX de")
+  ) {
+
+    return null;
+
+  }
+
+
+  try {
+
+    const normalized =
+      line
+        .replace(/\s+/g, " ")
+        .trim();
+
+
+    /*
+     * Extraemos spotter
+     */
+
+    const spotterMatch =
+      normalized.match(
+        /DX de\s+([A-Z0-9\/\-#]+):/i
+      );
+
+
+    if (!spotterMatch) {
+
+      return null;
+
+    }
+
+
+    let spotter =
+      cleanCall(
+        spotterMatch[1]
+          .replace(/-#$/, "")
+      );
+
+
+    /*
+     * Parte posterior a :
+     */
+
+    const afterColon =
+      normalized.split(":")
+        .slice(1)
+        .join(":")
+        .trim();
+
+
+    const parts =
+      afterColon.split(" ");
+
+
+    if (
+      parts.length < 2
+    ) {
+
+      return null;
+
+    }
+
+
+    const freq =
+      Number(
+        parts[0]
+      );
+
+
+    const dx =
+      cleanCall(
+        parts[1]
+      );
+
+
+    if (
+      !Number.isFinite(freq) ||
+      !dx
+    ) {
+
+      return null;
+
+    }
+
+
+    /*
+     * Solamente 40 metros
+     */
+
+    if (
+      freq < 7000 ||
+      freq > 7060
+    ) {
+
+      return null;
+
+    }
+
+
+    /*
+     * Buscar SNR
+     */
+
+    let snr = null;
+
+    const snrMatch =
+      normalized.match(
+        /(-?\d+)\s+dB/i
+      );
+
+
+    if (snrMatch) {
+
+      snr =
+        Number(
+          snrMatch[1]
+        );
+
+    }
+
+
+    /*
+     * Buscar WPM
+     */
+
+    let wpm = null;
+
+    const wpmMatch =
+      normalized.match(
+        /(\d+)\s+WPM/i
+      );
+
+
+    if (wpmMatch) {
+
+      wpm =
+        Number(
+          wpmMatch[1]
+        );
+
+    }
+
+
+    /*
+     * CQ
+     */
+
+    const isCQ =
+      /\bCQ\b/i.test(
+        normalized
+      );
+
+
+    /*
+     * Canal especial 7033
+     */
+
+    const isChannel =
+
+      freq >= 7032.9 &&
+
+      freq <= 7033.1;
+
+
+    return {
+
+      type:
+        "spot",
+
+      seq:
+        ++spotSequence,
+
+      dx,
+
+      spotter,
+
+      freq,
+
+      actualFreq:
+        freq,
+
+      snr,
+
+      wpm:
+        Number.isFinite(wpm)
+          ? wpm
+          : 0,
+
+      isCQ,
+
+      isChannel,
+
+      timestamp:
+        Date.now(),
+
+      raw:
+        normalized
+
+    };
+
+  } catch (error) {
+
+    console.error(
+
+      "parseRbnLine:",
+
+      error.message
+
+    );
+
+
+    return null;
+
+  }
+
+}
+
+
+/*
+ * ============================================================
+ * CONEXIÓN RBN
+ * ============================================================
+ */
+
+function connectRbn() {
+
+  if (rbnSocket) {
+
+    try {
+
+      rbnSocket.destroy();
+
+    } catch (_) {}
+
+  }
+
+
+  console.log(
+
+    `Conectando RBN ${RBN_HOST}:${RBN_PORT}...`
+
+  );
+
+
+  const socket =
+    net.createConnection({
+
+      host:
+        RBN_HOST,
+
+      port:
+        RBN_PORT
+
+    });
+
+
+  rbnSocket =
+    socket;
+
+
+  let buffer = "";
+
+
+  socket.setEncoding(
+    "utf8"
+  );
+
+
+  socket.on(
     "connect",
+
     () => {
 
       rbnConnected =
         true;
 
-      lastRbnDataAt =
-        Date.now();
-
 
       console.log(
-        "RBN TCP conectado"
+        "RBN conectado"
       );
 
 
-      setTimeout(
-        () => {
+      /*
+       * Login
+       */
 
-          if (
-            rbn &&
-            !rbn.destroyed
-          ) {
-            rbn.write(
-              RBN_LOGIN +
-              "\r\n"
-            );
-          }
-
-        },
-        700
+      socket.write(
+        `${RBN_LOGIN}\r\n`
       );
+
+
+      broadcast({
+
+        type:
+          "status",
+
+        status:
+          "rbn_connected",
+
+        timestamp:
+          Date.now()
+
+      });
 
     }
+
   );
 
 
-  /*
-   * STREAM RBN
-   */
-  rbn.on(
+  socket.on(
     "data",
+
     chunk => {
 
       lastRbnDataAt =
@@ -351,18 +1253,17 @@ function connectRbn() {
 
 
       buffer +=
-        chunk.toString(
-          "utf8"
-        );
+        chunk;
 
 
       const lines =
-        buffer.split(/\n/);
+        buffer.split(
+          /\r?\n/
+        );
 
 
       buffer =
-        lines.pop() ||
-        "";
+        lines.pop() || "";
 
 
       for (
@@ -371,543 +1272,280 @@ function connectRbn() {
       ) {
 
         const spot =
-          parseRbnLine(line);
+          parseRbnLine(
+            line
+          );
 
 
         if (!spot) {
+
+          rejectedSpots++;
+
           continue;
+
         }
 
 
-        /*
-         * Primero memoria.
-         */
-        rememberSpot(
-          spot
-        );
+        acceptedSpots++;
+
+        lastAcceptedSpotAt =
+          Date.now();
 
 
         /*
-         * Después WebSocket
-         * inmediatamente.
+         * WEB
          */
+
         broadcast(
           spot
         );
 
 
-        const mark =
-          spot.isChannel
-            ? " *** 7033 ***"
-            : "";
+        /*
+         * DIGEST
+         */
+
+        recordWhatsappHour(
+          spot
+        );
 
 
-        console.log(
-          `LIVE #${spot.seq} ` +
-          `${spot.spotter} -> ` +
-          `${spot.dx} ` +
-          `${spot.actualFreq.toFixed(2)} ` +
-          `${spot.snr} dB ` +
-          `${spot.wpm} WPM` +
-          mark
+        /*
+         * WHATSAPP
+         *
+         * EXCLUSIVAMENTE
+         * 7032.9–7033.1
+         */
+
+        maybeSendChannelWhatsapp(
+          spot
         );
 
       }
 
     }
+
   );
 
 
-  rbn.on(
+  socket.on(
     "error",
+
     error => {
 
       console.error(
+
         "RBN error:",
+
         error.message
+
       );
 
     }
+
   );
 
 
-  rbn.on(
+  socket.on(
     "close",
+
     () => {
-
-      console.log(
-        "RBN desconectado"
-      );
-
 
       rbnConnected =
         false;
 
 
-      scheduleRbnReconnect();
+      console.log(
 
-    }
-  );
+        "RBN desconectado. Reconectando..."
 
-}
-
-
-/*
- * WATCHDOG RBN
- */
-setInterval(
-  () => {
-
-    if (
-      !rbn ||
-      rbn.destroyed ||
-      !rbnConnected
-    ) {
-      return;
-    }
-
-
-    const silentFor =
-      Date.now() -
-      lastRbnDataAt;
-
-
-    if (
-      silentFor >
-      RBN_WATCHDOG_MS
-    ) {
-
-      console.warn(
-        "RBN sin datos 90 s. Reconectando..."
       );
 
-
-      try {
-        rbn.destroy();
-      } catch (_) {}
-
-    }
-
-  },
-  15000
-);
-
-
-/*
- * CORS
- */
-function corsHeaders(extra = {}) {
-  return {
-    "access-control-allow-origin":
-      "*",
-
-    "cache-control":
-      "no-store, no-cache, must-revalidate",
-
-    ...extra
-  };
-}
-
-
-/*
- * HTTP
- */
-const server =
-  http.createServer(
-    (req, res) => {
-
-      const url =
-        new URL(
-          req.url,
-          `http://${req.headers.host || "localhost"}`
-        );
-
-
-      /*
-       * ENDPOINT DE SPOTS
-       *
-       * Ej:
-       *
-       * /spots?after=123
-       *
-       * Devuelve todo lo posterior
-       * al spot #123.
-       */
-      if (
-        url.pathname ===
-        "/spots"
-      ) {
-
-        pruneHistory();
-
-
-        let after =
-          Number(
-            url.searchParams.get(
-              "after"
-            ) ||
-            0
-          );
-
-
-        if (
-          !Number.isFinite(after) ||
-          after < 0
-        ) {
-          after = 0;
-        }
-
-
-        const result =
-          history.filter(
-            spot =>
-              spot.seq >
-              after
-          );
-
-
-        res.writeHead(
-          200,
-          corsHeaders({
-            "content-type":
-              "application/json; charset=utf-8"
-          })
-        );
-
-
-        res.end(
-          JSON.stringify({
-
-            ok:
-              true,
-
-            spots:
-              result,
-
-            lastSeq:
-              spotSequence,
-
-            serverTime:
-              Date.now()
-
-          })
-        );
-
-
-        return;
-      }
-
-
-      /*
-       * HEALTH
-       */
-      if (
-        url.pathname ===
-        "/health"
-      ) {
-
-        pruneHistory();
-
-
-        res.writeHead(
-          200,
-          corsHeaders({
-            "content-type":
-              "application/json; charset=utf-8"
-          })
-        );
-
-
-        res.end(
-          JSON.stringify({
-
-            ok:
-              true,
-
-            live:
-              rbnConnected,
-
-            websocketClients:
-              clients.size,
-
-            historySpots:
-              history.length,
-
-            lastSeq:
-              spotSequence,
-
-            historyMinutes:
-              10,
-
-            secondsSinceRbnData:
-              lastRbnDataAt
-                ? Math.round(
-                    (
-                      Date.now() -
-                      lastRbnDataAt
-                    ) /
-                    1000
-                  )
-                : null,
-
-            channel:
-              "7032.9-7033.1"
-
-          })
-        );
-
-
-        return;
-      }
-
-
-      res.writeHead(
-        200,
-        corsHeaders({
-          "content-type":
-            "text/plain; charset=utf-8"
-        })
-      );
-
-
-      res.end(
-        "CW LATAM relay LIVE\n"
-      );
-
-    }
-  );
-
-
-/*
- * WEBSOCKET
- */
-const wss =
-  new WebSocketServer({
-    server,
-
-    perMessageDeflate:
-      false
-  });
-
-
-wss.on(
-  "connection",
-  ws => {
-
-    ws.isAlive =
-      true;
-
-
-    ws.on(
-      "pong",
-      () => {
-
-        ws.isAlive =
-          true;
-
-      }
-    );
-
-
-    clients.add(
-      ws
-    );
-
-
-    console.log(
-      `Navegador conectado. Total: ${clients.size}`
-    );
-
-
-    /*
-     * Estado.
-     */
-    ws.send(
-      JSON.stringify({
-
-        type:
-          "status",
-
-        live:
-          rbnConnected,
-
-        ts:
-          Date.now()
-
-      })
-    );
-
-
-    /*
-     * Historial.
-     */
-    pruneHistory();
-
-
-    ws.send(
-      JSON.stringify({
-
-        type:
-          "history",
-
-        spots:
-          history,
-
-        lastSeq:
-          spotSequence
-
-      })
-    );
-
-
-    ws.on(
-      "close",
-      () => {
-
-        clients.delete(
-          ws
-        );
-
-
-        console.log(
-          `Navegador desconectado. Total: ${clients.size}`
-        );
-
-      }
-    );
-
-
-    ws.on(
-      "error",
-      () => {
-
-        clients.delete(
-          ws
-        );
-
-      }
-    );
-
-  }
-);
-
-
-/*
- * HEARTBEAT PROTOCOLO
- */
-const websocketHeartbeat =
-  setInterval(
-    () => {
-
-      for (
-        const ws
-        of clients
-      ) {
-
-        if (
-          ws.isAlive ===
-          false
-        ) {
-
-          clients.delete(
-            ws
-          );
-
-
-          try {
-            ws.terminate();
-          } catch (_) {}
-
-
-          continue;
-        }
-
-
-        ws.isAlive =
-          false;
-
-
-        try {
-
-          ws.ping();
-
-        } catch (_) {
-
-          clients.delete(
-            ws
-          );
-
-
-          try {
-            ws.terminate();
-          } catch (_) {}
-
-        }
-
-      }
-
-    },
-    WS_HEARTBEAT_MS
-  );
-
-
-/*
- * HEARTBEAT DE APLICACIÓN
- */
-const applicationHeartbeat =
-  setInterval(
-    () => {
 
       broadcast({
 
         type:
-          "heartbeat",
+          "status",
 
-        ts:
-          Date.now(),
+        status:
+          "rbn_disconnected",
 
-        live:
-          rbnConnected,
-
-        lastSeq:
-          spotSequence
+        timestamp:
+          Date.now()
 
       });
 
-    },
-    APP_HEARTBEAT_MS
+
+      setTimeout(
+
+        connectRbn,
+
+        5000
+
+      );
+
+    }
+
   );
 
+}
 
-wss.on(
-  "close",
-  () => {
 
-    clearInterval(
-      websocketHeartbeat
-    );
+/*
+ * ============================================================
+ * HEALTH
+ * ============================================================
+ */
 
-    clearInterval(
-      applicationHeartbeat
-    );
+app.get(
+
+  "/health",
+
+  (req, res) => {
+
+    res.json({
+
+      ok:
+        true,
+
+      service:
+        "CW LATAM",
+
+      timestamp:
+        Date.now(),
+
+      rbn: {
+
+        connected:
+          rbnConnected,
+
+        login:
+          RBN_LOGIN,
+
+        acceptedSpots,
+
+        rejectedSpots,
+
+        lastDataAt:
+          lastRbnDataAt || null,
+
+        lastAcceptedSpotAt:
+          lastAcceptedSpotAt || null,
+
+        band:
+          "7000-7060",
+
+        channel:
+          "7032.9-7033.1"
+
+      },
+
+      websocket: {
+
+        clients:
+          wss.clients.size
+
+      },
+
+      whatsapp: {
+
+        enabled:
+          WHATSAPP_ENABLED,
+
+        configured:
+          whatsappConfigured(),
+
+        destination:
+          safeDestinationLabel(),
+
+        provider:
+          "GREEN API",
+
+        alertCooldownMinutes:
+          10,
+
+        digestMinutes:
+          60,
+
+        sentAlerts:
+          whatsappSentAlerts,
+
+        sentDigests:
+          whatsappSentDigests,
+
+        lastAlertAt:
+          whatsappLastAlertAt || null,
+
+        lastDigestAt:
+          whatsappLastDigestAt || null,
+
+        lastError:
+          whatsappLastError || null
+
+      }
+
+    });
 
   }
+
 );
 
 
 /*
- * ARRANQUE
+ * ============================================================
+ * ROOT
+ * ============================================================
  */
+
+app.get(
+
+  "/",
+
+  (req, res) => {
+
+    res.send(
+      "CW LATAM relay online"
+    );
+
+  }
+
+);
+
+
+/*
+ * ============================================================
+ * ARRANQUE
+ * ============================================================
+ */
+
 server.listen(
+
   PORT,
+
   () => {
 
     console.log(
+
       `CW LATAM relay activo en puerto ${PORT}`
+
+    );
+
+
+    console.log(
+
+      "WhatsApp:",
+
+      whatsappConfigured()
+
+        ? `ACTIVO -> ${safeDestinationLabel()}`
+
+        : "DESACTIVADO / incompleto"
+
     );
 
 
     connectRbn();
 
   }
+
 );
