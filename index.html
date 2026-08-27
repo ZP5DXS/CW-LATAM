@@ -2379,59 +2379,139 @@ html[data-theme="light"] .prop-badge{
 }
 
 
-/* ===== IA MAP STATE + MOBILE COLLISION FIX ===== */
-.map-wrap.ai-active{
-  box-shadow:inset 0 0 42px rgba(88,255,146,.08);
+/* ===== MI FOCO · IA VISUAL EXCLUSIVA ===== */
+
+/* FOCO 1500 km queda funcional, sin estética IA. */
+.map-wrap.focus-ai{
+  box-shadow:none!important;
 }
-.map-wrap.ai-active::before{
+
+/* MI FOCO: cambio visual fuerte y claramente distinto. */
+.map-wrap.ai-personal{
+  box-shadow:
+    inset 0 0 0 2px rgba(255,58,58,.68),
+    inset 0 0 34px rgba(255,35,35,.18),
+    0 0 28px rgba(255,35,35,.08);
+}
+
+/* Retícula + scanlines de análisis en tiempo real. */
+.map-wrap.ai-personal::before{
   content:"";
   position:absolute;
   inset:0;
   z-index:432;
   pointer-events:none;
-  opacity:.34;
+  opacity:.62;
   background:
-    linear-gradient(rgba(88,255,146,.035) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(88,255,146,.035) 1px,transparent 1px);
-  background-size:34px 34px;
-  mask-image:linear-gradient(to bottom,rgba(0,0,0,.85),rgba(0,0,0,.2));
-  animation:aiGridDrift 14s linear infinite;
+    repeating-linear-gradient(
+      0deg,
+      rgba(255,70,70,.035) 0px,
+      rgba(255,70,70,.035) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    linear-gradient(rgba(255,65,65,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,65,65,.045) 1px,transparent 1px);
+  background-size:auto,34px 34px,34px 34px;
+  animation:personalScanGrid 5.5s linear infinite;
 }
-.map-wrap.ai-active::after{
-  content:"IA · ANÁLISIS ACTIVO";
+
+/* Banda inferior de estado IA. */
+.map-wrap.ai-personal::after{
+  content:"● MI FOCO IA · ANALIZANDO RECEPCIÓN EN TIEMPO REAL";
   position:absolute;
   left:50%;
-  bottom:12px;
-  z-index:503;
+  bottom:10px;
+  z-index:504;
   transform:translateX(-50%);
   pointer-events:none;
-  padding:4px 8px;
-  border:1px solid rgba(88,255,146,.22);
-  border-radius:999px;
-  background:rgba(3,14,8,.72);
-  color:rgba(120,255,165,.72);
-  font:900 6.5px ui-monospace,SFMono-Regular,Menlo,monospace;
-  letter-spacing:.13em;
-  backdrop-filter:blur(5px);
-  box-shadow:0 0 22px rgba(88,255,146,.08);
+  white-space:nowrap;
+  padding:5px 10px;
+  border:1px solid rgba(255,75,75,.72);
+  border-radius:5px;
+  background:rgba(25,2,2,.82);
+  color:#ff7777;
+  font:900 7px ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.12em;
+  text-shadow:0 0 8px rgba(255,60,60,.65);
+  box-shadow:
+    0 0 16px rgba(255,45,45,.20),
+    inset 0 0 12px rgba(255,45,45,.08);
+  animation:personalStatusPulse 1.5s ease-in-out infinite;
 }
-.map-wrap.ai-personal::after{
-  content:"IA · MI FOCO ACTIVO";
-  color:#8affb1;
-  border-color:rgba(88,255,146,.32);
+
+/* El sweep existente cambia de carácter solamente en MI FOCO. */
+.map-wrap.ai-personal .radar-sweep{
+  animation-duration:2.8s!important;
+  filter:
+    hue-rotate(220deg)
+    saturate(2.4)
+    brightness(1.35);
+  opacity:.94;
 }
-@keyframes aiGridDrift{
-  from{background-position:0 0,0 0}
-  to{background-position:34px 34px,34px 34px}
+.map-wrap.ai-personal .radar-rings{
+  filter:hue-rotate(220deg) saturate(1.9) brightness(1.2);
+  opacity:.9;
+}
+
+/* Marco rojo animado tipo sistema de adquisición. */
+.map-wrap.ai-personal #map{
+  box-shadow:inset 0 0 46px rgba(255,35,35,.10);
+}
+.map-wrap.ai-personal .focus-cross{
+  display:block!important;
+  width:54px;
+  height:54px;
+  opacity:.52;
+}
+.map-wrap.ai-personal .focus-cross:before{
+  left:26px;
+  height:54px;
+  background:#ff5b5b;
+  box-shadow:0 0 12px rgba(255,60,60,.65);
+}
+.map-wrap.ai-personal .focus-cross:after{
+  top:26px;
+  width:54px;
+  background:#ff5b5b;
+  box-shadow:0 0 12px rgba(255,60,60,.65);
+}
+
+/* Los cuatro bordes "respiran" como un sistema de tracking. */
+.map-wrap.ai-personal{
+  animation:personalFramePulse 2.1s ease-in-out infinite;
+}
+
+@keyframes personalScanGrid{
+  from{background-position:0 0,0 0,0 0}
+  to{background-position:0 24px,34px 34px,34px 34px}
+}
+@keyframes personalStatusPulse{
+  0%,100%{opacity:.72}
+  50%{opacity:1}
+}
+@keyframes personalFramePulse{
+  0%,100%{
+    box-shadow:
+      inset 0 0 0 2px rgba(255,58,58,.48),
+      inset 0 0 34px rgba(255,35,35,.12),
+      0 0 20px rgba(255,35,35,.05);
+  }
+  50%{
+    box-shadow:
+      inset 0 0 0 2px rgba(255,82,82,.88),
+      inset 0 0 48px rgba(255,35,35,.22),
+      0 0 34px rgba(255,35,35,.12);
+  }
 }
 
 @media(max-width:700px){
-  /* Carrusel más vivo en móvil. */
+  /* Carrusel con ritmo más visible en móvil. */
   .footer-flags .country-roll-track{
-    animation-duration:15s!important;
+    animation-duration:12s!important;
   }
 
-  /* FOCO 1500 km ocupa su propia línea visual. */
+  /* El aviso FOCO 1500 queda limpio en su zona. */
   .focus-note{
     top:226px!important;
     left:8px!important;
@@ -2441,22 +2521,29 @@ html[data-theme="light"] .prop-badge{
     z-index:506!important;
   }
 
-  /* MI ESTACIÓN baja sólo cuando el aviso de FOCO está visible. */
+  /* MI ESTACIÓN se ancla abajo del mapa y nunca pisa FOCO/propagación. */
   .my-station-map-btn{
-    top:226px!important;
-    z-index:505!important;
-  }
-  .map-wrap.focus-ai .my-station-map-btn{
-    top:284px!important;
+    top:auto!important;
+    bottom:9px!important;
+    left:8px!important;
+    z-index:507!important;
   }
 
-  .map-wrap.ai-active::after{
-    bottom:8px;
-    font-size:5.8px;
-    letter-spacing:.09em;
+  /* Dejamos libre el centro inferior para el estado de MI FOCO. */
+  .map-wrap.ai-personal .my-station-map-btn{
+    bottom:34px!important;
+  }
+
+  .map-wrap.ai-personal::after{
+    bottom:7px;
+    max-width:calc(100% - 120px);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    font-size:5.5px;
+    padding:4px 7px;
+    letter-spacing:.07em;
   }
 }
-
 </style>
 </head>
 <body>
@@ -2769,7 +2856,7 @@ html[data-theme="light"] .prop-badge{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.27-ai-map-mobile-polish1";
+const CWLATAM_BUILD="2026.08.27-personal-focus-visual2";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -3682,8 +3769,11 @@ let personalMode=false;
 function updateMapIntelligenceVisual(){
  const wrap=document.querySelector(".map-wrap");
  if(!wrap)return;
- wrap.classList.toggle("ai-active",Boolean(focusMode||personalMode));
+
+ // FOCO 1500 km: solamente estado funcional, sin efectos IA.
  wrap.classList.toggle("focus-ai",Boolean(focusMode));
+
+ // MI FOCO: único modo que activa la experiencia visual IA.
  wrap.classList.toggle("ai-personal",Boolean(personalMode));
 }
 
