@@ -32,7 +32,7 @@ html,body{
   font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif
 }
 body{min-height:100vh}
-.shell{max-width:1580px;margin:auto;padding:10px 14px}
+.shell{width:100%;max-width:none;margin:0;padding:10px 14px}
 .topbar{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:8px}
 .brand{display:flex;gap:13px;align-items:center}
 .logo{width:44px;height:44px;border-radius:50%;border:1px solid rgba(88,255,146,.35);
@@ -2869,6 +2869,153 @@ html[data-theme="light"] .prop-badge{
   }
 }
 
+
+/* ===== CW LATAM · SDR AUDIO INTEGRATION ===== */
+.dial-spot{cursor:pointer!important}
+.dial-spot.sdr-tuned{text-shadow:0 0 10px currentColor;filter:brightness(1.25)}
+.sdr-dial-controls{
+  display:grid;grid-template-columns:38px auto minmax(0,1fr) auto;
+  align-items:center;gap:7px;margin-top:7px
+}
+.sdr-btn{
+  height:32px;border:1px solid var(--line);border-radius:9px;
+  background:rgba(255,255,255,.018);color:var(--muted);
+  font:900 8px ui-sans-serif,system-ui;letter-spacing:.06em;cursor:pointer
+}
+.sdr-play{width:38px;padding:0;color:var(--green);font-size:14px}
+.sdr-play.on{
+  border-color:rgba(88,255,146,.35);background:rgba(88,255,146,.055);
+  box-shadow:0 0 16px rgba(88,255,146,.07)
+}
+.sdr-scan.active{
+  color:var(--amber);border-color:rgba(255,200,92,.38);
+  background:rgba(255,200,92,.055)
+}
+.sdr-readout{
+  min-width:0;color:var(--muted);
+  font:800 7px ui-monospace,SFMono-Regular,Menlo,monospace;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+.sdr-readout b{color:var(--green);font-size:9px}
+.sdr-status{
+  justify-self:end;display:inline-flex;align-items:center;gap:5px;
+  color:var(--muted);font:900 6.5px ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.07em;white-space:nowrap
+}
+.sdr-status:before{content:"";width:6px;height:6px;border-radius:50%;background:#68766e}
+.sdr-status.online{color:var(--green)}
+.sdr-status.online:before{background:var(--green);box-shadow:0 0 8px var(--green)}
+.sdr-tune-marker{
+  position:absolute;z-index:18;top:12px;bottom:10px;width:1px;
+  background:rgba(88,255,146,.8);box-shadow:0 0 8px rgba(88,255,146,.55);
+  pointer-events:none;transform:translateX(-.5px);display:none
+}
+.sdr-tune-marker.show{display:block}
+.sdr-tune-marker:after{
+  content:"";position:absolute;left:50%;top:29px;width:6px;height:6px;
+  transform:translate(-50%,-50%);border-radius:50%;background:var(--green);
+  box-shadow:0 0 9px var(--green)
+}
+#cwLatamSdrFrame{
+  position:fixed;left:-20px;top:-20px;width:2px;height:2px;
+  border:0;opacity:.01;pointer-events:none
+}
+@media(max-width:700px){
+  .sdr-dial-controls{grid-template-columns:36px 58px minmax(0,1fr);gap:5px}
+  .sdr-play{width:36px}
+  .sdr-status{grid-column:1/-1;justify-self:start;margin-top:-1px}
+  .sdr-readout{text-align:right}
+}
+
+
+/* ===== SDR POLISH · FULL WIDTH / SCAN SPEED ===== */
+.shell{width:100%!important;max-width:none!important;margin:0!important}
+
+.sdr-dial-controls{
+  display:grid!important;
+  grid-template-columns:40px 132px minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:8px!important;
+  margin-top:8px!important;
+}
+.sdr-btn{
+  height:34px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:0 10px!important;
+  line-height:1!important;
+  text-align:center!important;
+}
+.sdr-play{
+  width:40px!important;
+  padding:0!important;
+  font-size:15px!important;
+}
+.sdr-scan{
+  min-width:132px!important;
+  gap:5px!important;
+}
+.sdr-scan-speed{
+  display:inline-block;
+  margin-left:4px;
+  opacity:.28;
+  color:var(--muted);
+  font:900 6px ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.05em;
+  transition:opacity .15s,color .15s;
+}
+.sdr-scan.active .sdr-scan-speed{
+  opacity:1;
+  color:var(--amber);
+}
+.sdr-readout{
+  display:flex!important;
+  align-items:center!important;
+  min-height:34px!important;
+}
+.sdr-status{
+  min-height:34px!important;
+  align-items:center!important;
+}
+@media(max-width:700px){
+  .sdr-dial-controls{
+    grid-template-columns:38px 118px minmax(0,1fr)!important;
+    gap:6px!important;
+  }
+  .sdr-play{width:38px!important}
+  .sdr-scan{min-width:76px!important}
+  .sdr-status{
+    grid-column:1/-1!important;
+    justify-self:start!important;
+    min-height:18px!important;
+  }
+}
+
+
+/* SCAN: etiqueta completa y centrada */
+.sdr-scan{
+  width:132px!important;
+  min-width:132px!important;
+  white-space:nowrap!important;
+  padding:0 12px!important;
+}
+#sdrScanLabel{
+  width:100%;
+  text-align:center;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.045em;
+}
+@media(max-width:700px){
+  .sdr-scan{
+    width:118px!important;
+    min-width:118px!important;
+    padding:0 7px!important;
+  }
+  #sdrScanLabel{font-size:8px;letter-spacing:.025em}
+}
+
 </style>
 </head>
 <body>
@@ -2987,8 +3134,15 @@ html[data-theme="light"] .prop-badge{
     <div class="dial-scale" id="dialScale">
       <div class="dial-hover-readout" id="dialHoverReadout"></div>
       
+      <div class="sdr-tune-marker" id="sdrTuneMarker"></div>
       <div class="dial-spots" id="dialSpots"></div>
       <div class="dial-labels"><span>7.006</span><span>7.015</span><span>7.024</span><span>7.033</span><span>7.042</span><span>7.051</span><span>7.060</span></div>
+    </div>
+    <div class="sdr-dial-controls">
+      <button type="button" class="sdr-btn sdr-play" id="sdrPlayBtn" title="Play / Pause">▶</button>
+      <button type="button" class="sdr-btn sdr-scan" id="sdrScanBtn"><span id="sdrScanLabel">SCAN</span></button>
+      <div class="sdr-readout"><b id="sdrFreqReadout">7033.0 kHz</b> · CW <span id="sdrModeReadout">· MANUAL</span></div>
+      <div class="sdr-status" id="sdrStatus">SDR OFFLINE</div>
     </div>
   </div>
 </section>
@@ -3208,7 +3362,7 @@ html[data-theme="light"] .prop-badge{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.27-net-clean-footer-polish2";
+const CWLATAM_BUILD="2026.08.27-sdr-scan-pt";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -4415,7 +4569,7 @@ function renderActivity(){
        ${voteHtml}
      </div>
      <div class="decode-right">
-       <div class="decode-freq">${v.isChannel?"7033.0":v.freq.toFixed(1)}</div>
+       <div class="decode-freq" style="cursor:pointer" title="Escuchar esta frecuencia" onclick="event.stopPropagation();sdrTuneCall(\'${call}\')">${v.isChannel?"7033.0":v.freq.toFixed(1)}</div>
        <div class="decode-age">${ageText(age)}</div>
      </div>
    </div>`;
@@ -4432,6 +4586,359 @@ function renderActivity(){
  }
 }
 function renderFeed(){}
+
+// ---- SDR AUDIO · DIAL / SCAN --------------------------------------------------
+const SDR_BASE_URL="http://pardinho.websdr.com.br:8073/";
+const SDR_DIAL_MIN=7006;
+const SDR_DIAL_MAX=7060;
+const SDR_HOME_FREQ=7033;
+const SDR_SCAN_SETTLE_MS=1800;
+const SDR_SCAN_SPEEDS={
+  LOW:20000,
+  MEDIUM:15000,
+  FAST:10000
+};
+const SDR_SCAN_SPEED_ORDER=["LOW","MEDIUM","FAST"];
+let sdrScanSpeed="MEDIUM";
+
+let sdrAudioOn=false;
+let sdrScanOn=false;
+let sdrCurrentFreq=SDR_HOME_FREQ;
+let sdrScanTimer=null;
+let sdrScanToken=0;
+
+function sdrFrame(){return document.getElementById("cwLatamSdrFrame")}
+function sdrUrl(freq){
+ return `${SDR_BASE_URL}?f=${Number(freq).toFixed(1)}cw&no_wf&vol=100&user=CW_LATAM&_=${Date.now()}`;
+}
+function sdrFreqToPct(freq){
+ return Math.max(0,Math.min(100,(Number(freq)-SDR_DIAL_MIN)/(SDR_DIAL_MAX-SDR_DIAL_MIN)*100));
+}
+function sdrClampFreq(freq){
+ return Math.max(SDR_DIAL_MIN,Math.min(SDR_DIAL_MAX,Number(freq)||SDR_HOME_FREQ));
+}
+function updateSdrUi(){
+ const play=document.getElementById("sdrPlayBtn");
+ const scan=document.getElementById("sdrScanBtn");
+ const readout=document.getElementById("sdrFreqReadout");
+ const mode=document.getElementById("sdrModeReadout");
+ const status=document.getElementById("sdrStatus");
+ const tuneMarker=document.getElementById("sdrTuneMarker");
+
+ if(play){
+   play.textContent=sdrAudioOn?"❚❚":"▶";
+   play.classList.toggle("on",sdrAudioOn);
+ }
+ if(scan)scan.classList.toggle("active",sdrScanOn);
+ const scanLabel=document.getElementById("sdrScanLabel");
+ if(scanLabel){
+   scanLabel.textContent=sdrScanOn
+     ? (sdrScanSpeed==="LOW"
+         ?"SCAN LENTO"
+         :sdrScanSpeed==="MEDIUM"
+           ?(currentLang==="pt"?"SCAN MÉDIO":"SCAN MEDIO")
+           :"SCAN RÁPIDO")
+     : "SCAN";
+ }
+ if(readout)readout.textContent=`${Number(sdrCurrentFreq).toFixed(1)} kHz`;
+ if(mode)mode.textContent=sdrScanOn
+   ?`· ${sdrScanSpeed==="LOW"?"LENTO":sdrScanSpeed==="MEDIUM"?(currentLang==="pt"?"MÉDIO":"MEDIO"):"RÁPIDO"}`
+   :"· MANUAL";
+ if(status){
+   status.className="sdr-status"+(sdrAudioOn?" online":"");
+   status.textContent=sdrAudioOn?"SDR ONLINE":"SDR OFFLINE";
+ }
+ if(tuneMarker){
+   tuneMarker.style.left=`${sdrFreqToPct(sdrCurrentFreq)}%`;
+   tuneMarker.classList.toggle("show",sdrAudioOn);
+ }
+ }
+function sdrStopScan(){
+ sdrScanOn=false;
+ clearTimeout(sdrScanTimer);
+ sdrScanTimer=null;
+ sdrScanToken++;
+ updateSdrUi();
+}
+function sdrPause(){
+ sdrStopScan();
+ sdrAudioOn=false;
+ const frame=sdrFrame();
+ if(frame)frame.src="about:blank";
+ updateSdrUi();
+ if(typeof renderDial==="function")renderDial();
+ if(typeof updateAlertButton==="function")updateAlertButton();
+ if(typeof alertQueue!=="undefined")alertQueue=[];
+}
+function sdrTune(freq,{fromScan=false}={}){
+ sdrCurrentFreq=sdrClampFreq(freq);
+ if(!fromScan)sdrStopScan();
+ updateSdrUi();
+ if(typeof renderDial==="function")renderDial();
+
+ if(!sdrAudioOn)return;
+ const frame=sdrFrame();
+ if(!frame)return;
+
+ frame.src="about:blank";
+ setTimeout(()=>{
+   if(!sdrAudioOn)return;
+   frame.src=sdrUrl(sdrCurrentFreq);
+ },25);
+}
+function sdrPlay(){
+ if(sdrAudioOn)return;
+ sdrAudioOn=true;
+ sdrCurrentFreq=SDR_HOME_FREQ;
+ if(typeof stopCWAlert==="function")stopCWAlert(true);
+ updateSdrUi();
+ if(typeof renderDial==="function")renderDial();
+ if(typeof updateAlertButton==="function")updateAlertButton();
+
+ const frame=sdrFrame();
+ if(frame)frame.src=sdrUrl(sdrCurrentFreq);
+}
+function sdrTogglePlay(){
+ if(sdrAudioOn)sdrPause();
+ else sdrPlay();
+}
+function sdrScanEntries(){
+ const now=Date.now();
+ const rows=[...active.entries()]
+   .filter(([call,v])=>{
+     const f=Number(v.actualFreq ?? v.freq);
+     return Number.isFinite(f)&&f>=SDR_DIAL_MIN&&f<=SDR_DIAL_MAX&&now-Number(v.last||0)<=ACTIVE_MS;
+   })
+   .map(([call,v])=>({
+     call,
+     freq:Number(v.actualFreq ?? v.freq),
+     isChannel:Boolean(v.isChannel),
+     last:Number(v.last||0)
+   }))
+   .sort((a,b)=>{
+     if(a.isChannel!==b.isChannel)return b.isChannel?1:-1;
+     return b.last-a.last;
+   });
+
+ const out=[];
+ for(const row of rows){
+   if(!out.some(x=>Math.abs(x.freq-row.freq)<0.11))out.push(row);
+ }
+ return out;
+}
+
+function sdrCurrentDwell(){
+ return SDR_SCAN_SPEEDS[sdrScanSpeed]||SDR_SCAN_SPEEDS.MEDIUM;
+}
+function sdrCycleScanSpeed(){
+ const i=SDR_SCAN_SPEED_ORDER.indexOf(sdrScanSpeed);
+ sdrScanSpeed=SDR_SCAN_SPEED_ORDER[(i+1)%SDR_SCAN_SPEED_ORDER.length];
+ updateSdrUi();
+
+ // Si SCAN está activo y realmente hay varias frecuencias,
+ // reprogramamos desde ahora con la nueva cadencia.
+ if(sdrScanOn){
+   const entries=sdrScanEntries();
+   if(entries.length>1){
+     const token=sdrScanToken;
+     clearTimeout(sdrScanTimer);
+     sdrScheduleNextScan(token);
+   }
+ }
+}
+function sdrScheduleNextScan(token){
+ clearTimeout(sdrScanTimer);
+ sdrScanTimer=setTimeout(()=>{
+   if(!sdrAudioOn||!sdrScanOn||token!==sdrScanToken)return;
+   sdrScanNext(token);
+ },sdrCurrentDwell());
+}
+function sdrScanNext(token=sdrScanToken){
+ if(!sdrAudioOn||!sdrScanOn||token!==sdrScanToken)return;
+
+ const entries=sdrScanEntries();
+
+ // Sin actividad: 7033 permanente. No recargar ni temporizar.
+ if(entries.length===0){
+   clearTimeout(sdrScanTimer);
+   sdrScanTimer=null;
+   if(Math.abs(sdrCurrentFreq-SDR_HOME_FREQ)>=0.11){
+     sdrTune(SDR_HOME_FREQ,{fromScan:true});
+   }
+   return;
+ }
+
+ // Una sola frecuencia activa: quedarse permanentemente ahí.
+ // No tiene sentido cortar el audio y volver a abrir la misma sesión.
+ if(entries.length===1){
+   clearTimeout(sdrScanTimer);
+   sdrScanTimer=null;
+   const only=entries[0];
+   if(Math.abs(sdrCurrentFreq-only.freq)>=0.11){
+     sdrTune(only.freq,{fromScan:true});
+   }
+   return;
+ }
+
+ // Dos o más: rotación real.
+ const currentIndex=entries.findIndex(x=>Math.abs(x.freq-sdrCurrentFreq)<0.11);
+ const next=entries[(currentIndex+1+entries.length)%entries.length];
+ sdrTune(next.freq,{fromScan:true});
+
+ clearTimeout(sdrScanTimer);
+ sdrScanTimer=setTimeout(()=>{
+   if(sdrAudioOn&&sdrScanOn&&token===sdrScanToken)sdrScanNext(token);
+ },sdrCurrentDwell()+SDR_SCAN_SETTLE_MS+5000);
+}
+function sdrStartScan(){
+ if(!sdrAudioOn)sdrPlay();
+ sdrScanOn=true;
+ const token=++sdrScanToken;
+ const entries=sdrScanEntries();
+
+ clearTimeout(sdrScanTimer);
+ sdrScanTimer=null;
+
+ if(entries.length===0){
+   if(Math.abs(sdrCurrentFreq-SDR_HOME_FREQ)>=0.11){
+     sdrTune(SDR_HOME_FREQ,{fromScan:true});
+   }
+   updateSdrUi();
+   return;
+ }
+
+ if(entries.length===1){
+   if(Math.abs(sdrCurrentFreq-entries[0].freq)>=0.11){
+     sdrTune(entries[0].freq,{fromScan:true});
+   }
+   updateSdrUi();
+   return;
+ }
+
+ // Con varios spots, 7033 primero si está activo.
+ const first=entries.find(x=>x.isChannel)||entries[0];
+ sdrTune(first.freq,{fromScan:true});
+ updateSdrUi();
+
+ // El load del iframe rearma el tiempo útil; fallback por seguridad.
+ sdrScanTimer=setTimeout(()=>sdrScanNext(token),sdrCurrentDwell()+SDR_SCAN_SETTLE_MS+5000);
+}
+function sdrToggleScan(){
+ if(!sdrScanOn){
+   sdrScanSpeed="LOW";
+   sdrStartScan();
+   updateSdrUi();
+   return;
+ }
+
+ if(sdrScanSpeed==="LOW"){
+   sdrScanSpeed="MEDIUM";
+   updateSdrUi();
+   const entries=sdrScanEntries();
+   if(entries.length>1)sdrScheduleNextScan(sdrScanToken);
+   return;
+ }
+
+ if(sdrScanSpeed==="MEDIUM"){
+   sdrScanSpeed="FAST";
+   updateSdrUi();
+   const entries=sdrScanEntries();
+   if(entries.length>1)sdrScheduleNextScan(sdrScanToken);
+   return;
+ }
+
+ // FAST -> OFF. Al quedar apagado, manual implícito.
+ sdrStopScan();
+}
+function sdrTuneCall(call){
+ const v=active.get(String(call||"").toUpperCase());
+ if(!v)return;
+ const target=Number(v.actualFreq ?? v.freq);
+ sdrStopScan();
+
+ if(!sdrAudioOn){
+   sdrAudioOn=true;
+   sdrCurrentFreq=sdrClampFreq(target);
+   if(typeof stopCWAlert==="function")stopCWAlert(true);
+   updateSdrUi();
+   if(typeof updateAlertButton==="function")updateAlertButton();
+   const frame=sdrFrame();
+   if(frame)frame.src=sdrUrl(sdrCurrentFreq);
+   renderDial();
+   return;
+ }
+ sdrTune(target);
+}
+function sdrTuneFromDialEvent(e){
+ if(e.target.closest(".dial-spot"))return;
+
+ const scale=e.currentTarget;
+ const r=scale.getBoundingClientRect();
+ const pct=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
+ const freq=SDR_DIAL_MIN+pct*(SDR_DIAL_MAX-SDR_DIAL_MIN);
+
+ sdrStopScan();
+ if(!sdrAudioOn){
+   sdrAudioOn=true;
+   sdrCurrentFreq=sdrClampFreq(freq);
+   if(typeof stopCWAlert==="function")stopCWAlert(true);
+   updateSdrUi();
+   if(typeof updateAlertButton==="function")updateAlertButton();
+   const frame=sdrFrame();
+   if(frame)frame.src=sdrUrl(sdrCurrentFreq);
+   renderDial();
+   return;
+ }
+ sdrTune(freq);
+}
+
+const _sdrFrame=sdrFrame();
+if(_sdrFrame){
+ _sdrFrame.addEventListener("load",()=>{
+   if(!_sdrFrame.src||_sdrFrame.src==="about:blank"||!sdrAudioOn)return;
+   if(sdrScanOn){
+     const token=sdrScanToken;
+     clearTimeout(sdrScanTimer);
+     setTimeout(()=>{
+       if(!sdrAudioOn||!sdrScanOn||token!==sdrScanToken)return;
+       const entries=sdrScanEntries();
+       if(entries.length>1)sdrScheduleNextScan(token);
+       else sdrScanTimer=null;
+     },SDR_SCAN_SETTLE_MS);
+   }
+ });
+}
+document.getElementById("sdrPlayBtn")?.addEventListener("click",sdrTogglePlay);
+document.getElementById("sdrScanBtn")?.addEventListener("click",sdrToggleScan);
+document.getElementById("dialScale")?.addEventListener("click",sdrTuneFromDialEvent);
+window.addEventListener("beforeunload",()=>{
+ const frame=sdrFrame();
+ if(frame)frame.src="about:blank";
+});
+updateSdrUi();
+
+
+let sdrLastScanSignature="";
+function sdrReevaluateScanTargets(){
+ if(!sdrScanOn||!sdrAudioOn)return;
+ const entries=sdrScanEntries();
+ const signature=entries.map(x=>`${x.freq.toFixed(1)}:${x.isChannel?1:0}`).join("|");
+ if(signature===sdrLastScanSignature)return;
+ sdrLastScanSignature=signature;
+
+ if(entries.length===0){
+   clearTimeout(sdrScanTimer);sdrScanTimer=null;
+   if(Math.abs(sdrCurrentFreq-SDR_HOME_FREQ)>=0.11)sdrTune(SDR_HOME_FREQ,{fromScan:true});
+   return;
+ }
+ if(entries.length===1){
+   clearTimeout(sdrScanTimer);sdrScanTimer=null;
+   if(Math.abs(sdrCurrentFreq-entries[0].freq)>=0.11)sdrTune(entries[0].freq,{fromScan:true});
+   return;
+ }
+ if(!sdrScanTimer)sdrScheduleNextScan(sdrScanToken);
+}
+
 function renderDial(){
  const DIAL_MIN=7006,DIAL_MAX=7060;
 
@@ -4452,8 +4959,11 @@ function renderDial(){
    const top=24+lane*18;
    const opacity=Math.max(0,1-(Date.now()-v.last)/ACTIVE_MS);
    const dialAlert=v.isChannel?"channel":(isWatched(call)?"watch":"");
-    return `<div class="dial-spot ${dialAlert}" onclick="silenceSpotAlert('${call}');openQRZ('${call}')" style="left:${pct}%;top:${top}px;opacity:${opacity};cursor:pointer" title="${call} ${v.actualFreq?.toFixed?.(1) || v.freq.toFixed(1)}">${call}</div>`
+   const f=Number(v.actualFreq??v.freq);
+   const tuned=sdrAudioOn&&Math.abs(f-sdrCurrentFreq)<0.11?" sdr-tuned":"";
+   return `<div class="dial-spot ${dialAlert}${tuned}" onclick="event.stopPropagation();silenceSpotAlert('${call}');sdrTuneCall('${call}')" style="left:${pct}%;top:${top}px;opacity:${opacity}" title="Escuchar ${call} · ${f.toFixed(1)} kHz CW">${call}</div>`
  }).join("")
+ sdrReevaluateScanTargets();
 }
 
 function syncMainPanelHeights(){
@@ -5832,6 +6342,7 @@ function applyLanguage(){
  renderSeasonUI();
  renderActivity();
  if(communityStatsCache)renderFooterStats(communityStatsCache);
+ updateSdrUi();
 
  renderPublicRanking();
  renderSeasonUI();}
@@ -5922,8 +6433,12 @@ function updateAlertButton(){
   const btn=document.getElementById("alertToggle");
   if(!btn)return;
   btn.classList.toggle("enabled",alertsEnabled);
-  btn.setAttribute("aria-label",alertsEnabled?"Silenciar alertas CW":"Activar alertas CW");
-  btn.setAttribute("title",alertsEnabled?"Silenciar alertas CW":"Activar alertas CW");
+  const sdrMuted=typeof sdrAudioOn!=="undefined"&&sdrAudioOn;
+  const label=sdrMuted
+    ?"Alertas CW activas · silenciadas mientras el SDR está en PLAY"
+    :(alertsEnabled?"Silenciar alertas CW":"Activar alertas CW");
+  btn.setAttribute("aria-label",label);
+  btn.setAttribute("title",label);
 }
 
 function getAudioContext(){
@@ -6014,7 +6529,7 @@ function alertAlreadyQueued(call){
 }
 
 function queueCWAlert(call,priority=1,reason="watch"){
- if(!alertsEnabled||restoringHistory)return;
+ if(!alertsEnabled||restoringHistory||sdrAudioOn)return;
  const c=String(call||"").toUpperCase();
  if(!c)return;
 
@@ -6035,7 +6550,7 @@ function queueCWAlert(call,priority=1,reason="watch"){
 }
 
 async function processCWAlertQueue(){
- if(alertPlaying||!alertsEnabled)return;
+ if(alertPlaying||!alertsEnabled||sdrAudioOn)return;
  const item=alertQueue.shift();
  if(!item)return;
 
@@ -6464,5 +6979,6 @@ window.CWLATAM={
 connectRBN();
 
 </script>
+<iframe id="cwLatamSdrFrame" allow="autoplay"></iframe>
 </body>
 </html>
