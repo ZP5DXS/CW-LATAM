@@ -132,9 +132,6 @@ function upstreamHeaders(headers) {
 }
 
 function proxyHttp(req, res) {
-  let upstreamResponded = false;
-  let responseFinished = false;
-
   const up = http.request(
     {
       hostname: SDR_UPSTREAM_HOST,
@@ -144,8 +141,6 @@ function proxyHttp(req, res) {
       headers: upstreamHeaders(req.headers)
     },
     upRes => {
-      upstreamResponded = true;
-      up.setTimeout(0);
       const headers = { ...upRes.headers };
 
       delete headers["x-frame-options"];
@@ -210,7 +205,7 @@ function proxyHttp(req, res) {
     const btn=document.getElementById("cwSafariAudioUnlock");
     if(btn){
       btn.textContent=ok?"AUDIO ✓":"START AUDIO";
-      if(ok)setTimeout(()=>{btn.style.opacity=".18"},900);
+      if(ok)setTimeout(()=>{btn.style.display="none"},450);
     }
     try{parent.postMessage({source:"cwlatam-kiwi",type:"audio-unlocked",ok},"*")}catch{}
   }
@@ -232,11 +227,34 @@ function proxyHttp(req, res) {
     });
     btn.addEventListener("click",unlockAudio,{passive:true});
     (document.body||document.documentElement).appendChild(btn);
+    try{parent.postMessage({source:"cwlatam-kiwi",type:"audio-unlock-required"},"*")}catch{}
+  }
+
+  async function autoTryResume(){
+    const list=window.__CW_AUDIO_CONTEXTS||contexts;
+    let running=false;
+    for(const ctx of list){
+      try{
+        if(ctx.state!=="running")await ctx.resume();
+        if(ctx.state==="running")running=true;
+      }catch{}
+    }
+    if(running){
+      const b=document.getElementById("cwSafariAudioUnlock");
+      if(b)b.style.display="none";
+      try{parent.postMessage({source:"cwlatam-kiwi",type:"audio-unlocked",ok:true,auto:true},"*")}catch{}
+      return true;
+    }
+    return false;
   }
 
   if(document.readyState==="loading"){
-    document.addEventListener("DOMContentLoaded",addButton,{once:true});
-  }else addButton();
+    document.addEventListener("DOMContentLoaded",()=>{
+      setTimeout(async()=>{ if(!(await autoTryResume()))addButton(); },700);
+    },{once:true});
+  }else{
+    setTimeout(async()=>{ if(!(await autoTryResume()))addButton(); },700);
+  }
 
   window.addEventListener("message",e=>{
     const d=e.data||{};
@@ -253,17 +271,13 @@ function proxyHttp(req, res) {
           delete headers["content-encoding"];
           headers["content-length"]=String(out.length);
           headers["cache-control"]="no-store";
-          if(responseFinished || res.writableEnded)return;
-          responseFinished = true;
-          if(!res.headersSent)res.writeHead(upRes.statusCode||200,headers);
+          res.writeHead(upRes.statusCode||200,headers);
           res.end(out);
         });
         return;
       }
 
-      if(responseFinished || res.writableEnded)return;
-      responseFinished = true;
-      if(!res.headersSent)res.writeHead(upRes.statusCode || 200, headers);
+      res.writeHead(upRes.statusCode || 200, headers);
       upRes.pipe(res);
     }
   );
@@ -275,13 +289,6 @@ function proxyHttp(req, res) {
   up.on("error", err => {
     console.error("SDR HTTP:", err.message);
 
-    // Si Kiwi ya empezó a responder, no podemos enviar otro HTTP response.
-    // Cerramos únicamente el upstream y dejamos que la respuesta existente termine.
-    if (upstreamResponded || responseFinished || res.headersSent || res.writableEnded) {
-      return;
-    }
-
-    responseFinished = true;
     if (!res.headersSent) {
       res.writeHead(502, {
         "content-type": "text/plain; charset=utf-8",

@@ -3016,6 +3016,40 @@ html[data-theme="light"] .prop-badge{
   #sdrScanLabel{font-size:8px;letter-spacing:.025em}
 }
 
+
+
+/* ===== SDR SAFARI/iOS · explicit audio unlock ===== */
+.sdr-play-wrap{
+  width:40px;height:34px;position:relative;display:block;overflow:visible
+}
+.sdr-play-wrap .sdr-play{
+  position:absolute;inset:0;width:40px!important;height:34px!important;z-index:1
+}
+.sdr-kiwi-frame{
+  position:fixed;left:-20px;top:-20px;width:2px;height:2px;
+  border:0;opacity:.01;pointer-events:none;z-index:-1
+}
+/* Safari solamente: cuando Kiwi avisa que WebAudio está suspendido,
+   mostramos SU propio botón START AUDIO sobre los controles. */
+html.sdr-safari.sdr-audio-unlock-needed .sdr-kiwi-frame{
+  position:absolute!important;
+  left:0!important;top:0!important;
+  width:118px!important;height:46px!important;
+  border:0!important;border-radius:9px!important;
+  opacity:1!important;pointer-events:auto!important;z-index:50!important;
+  background:#0c1c13!important
+}
+html.sdr-safari.sdr-audio-unlock-needed .sdr-play-wrap .sdr-play{
+  opacity:.18;pointer-events:none
+}
+@media(max-width:700px){
+  .sdr-play-wrap{width:38px;height:34px}
+  .sdr-play-wrap .sdr-play{width:38px!important}
+  html.sdr-safari.sdr-audio-unlock-needed .sdr-kiwi-frame{
+    width:118px!important;height:46px!important
+  }
+}
+
 </style>
 </head>
 <body>
@@ -3139,7 +3173,10 @@ html[data-theme="light"] .prop-badge{
       <div class="dial-labels"><span>7.006</span><span>7.015</span><span>7.024</span><span>7.033</span><span>7.042</span><span>7.051</span><span>7.060</span></div>
     </div>
     <div class="sdr-dial-controls">
-      <button type="button" class="sdr-btn sdr-play" id="sdrPlayBtn" title="Play / Pause">▶</button>
+      <div class="sdr-play-wrap">
+        <button type="button" class="sdr-btn sdr-play" id="sdrPlayBtn" title="Play / Pause">▶</button>
+        <iframe id="cwLatamSdrFrame" class="sdr-kiwi-frame" allow="autoplay *" title="SDR audio"></iframe>
+      </div>
       <button type="button" class="sdr-btn sdr-scan" id="sdrScanBtn"><span id="sdrScanLabel">SCAN</span></button>
       <div class="sdr-readout"><b id="sdrFreqReadout">7033.0 kHz</b> · CW <span id="sdrModeReadout">· MANUAL</span></div>
       <div class="sdr-status" id="sdrStatus">SDR OFFLINE</div>
@@ -3362,7 +3399,7 @@ html[data-theme="light"] .prop-badge{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.27-sdr-user-gesture1";
+const CWLATAM_BUILD="2026.08.27-sdr-final-win-mac";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -4589,6 +4626,15 @@ function renderFeed(){}
 
 // ---- SDR AUDIO · DIAL / SCAN --------------------------------------------------
 const SDR_BASE_URL="https://cw-latam-sdr.onrender.com/";
+const SDR_IS_SAFARI=(()=>{
+ const ua=navigator.userAgent;
+ const vendor=navigator.vendor||"";
+ return /Safari/i.test(ua) &&
+        /Apple Computer/i.test(vendor) &&
+        !/Chrome|CriOS|Chromium|Edg|OPR|Firefox|FxiOS/i.test(ua);
+})();
+if(SDR_IS_SAFARI)document.documentElement.classList.add("sdr-safari");
+
 const SDR_DIAL_MIN=7006;
 const SDR_DIAL_MAX=7060;
 const SDR_HOME_FREQ=7033;
@@ -4619,6 +4665,16 @@ let sdrLastProbeOk=false;
 let sdrHasSession=false;
 
 function sdrFrame(){return document.getElementById("cwLatamSdrFrame")}
+function sdrSafariFrame(){return document.getElementById("sdrSafariPlayer")}
+function sdrSafariPost(type,extra={}){
+ const f=sdrSafariFrame();
+ try{
+   f?.contentWindow?.postMessage(
+     {source:"cwlatam-parent",type,...extra},
+     "https://cw-latam-sdr.onrender.com"
+   );
+ }catch{}
+}
 function sdrUrl(freq){
  return `${SDR_BASE_URL}?f=${Number(freq).toFixed(1)}cw&no_wf&vol=100&user=CW_LATAM&_=${Date.now()}`;
 }
@@ -4761,6 +4817,7 @@ function sdrStopScan(){
 }
 function sdrPause(){
  sdrStopScan();
+ document.documentElement.classList.remove("sdr-audio-unlock-needed");
  sdrAudioOn=false;
  sdrConnecting=false;
  sdrLastError="";
@@ -4953,8 +5010,8 @@ function sdrTuneCall(call){
  sdrStopScan();
 
  if(!sdrAudioOn){
-   sdrAudioOn=true;
    sdrCurrentFreq=sdrClampFreq(target);
+   sdrAudioOn=true;
    if(typeof stopCWAlert==="function")stopCWAlert(true);
    updateSdrUi();
    if(typeof updateAlertButton==="function")updateAlertButton();
@@ -4974,8 +5031,8 @@ function sdrTuneFromDialEvent(e){
 
  sdrStopScan();
  if(!sdrAudioOn){
-   sdrAudioOn=true;
    sdrCurrentFreq=sdrClampFreq(freq);
+   sdrAudioOn=true;
    if(typeof stopCWAlert==="function")stopCWAlert(true);
    updateSdrUi();
    if(typeof updateAlertButton==="function")updateAlertButton();
@@ -5013,6 +5070,38 @@ if(_sdrFrame){
  });
 }
 document.getElementById("sdrPlayBtn")?.addEventListener("click",sdrTogglePlay);
+window.addEventListener("message",e=>{
+ if(!SDR_IS_SAFARI)return;
+ if(e.origin!=="https://cw-latam-sdr.onrender.com")return;
+ const d=e.data||{};
+ if(d.source!=="cwlatam-kiwi")return;
+
+ if(d.type==="audio-unlock-required"){
+   document.documentElement.classList.add("sdr-audio-unlock-needed");
+   sdrConnecting=true;
+   updateSdrUi();
+   const status=document.getElementById("sdrStatus");
+   if(status)status.textContent="START AUDIO";
+   // Si SCAN estaba contando, lo pausamos hasta que el usuario desbloquee.
+   clearTimeout(sdrScanTimer);
+   return;
+ }
+
+ if(d.type==="audio-unlocked"){
+   document.documentElement.classList.remove("sdr-audio-unlock-needed");
+   sdrConnecting=false;
+   sdrLastError="";
+   sdrHasSession=true;
+   updateSdrUi();
+
+   if(sdrScanOn){
+     const entries=sdrScanEntries();
+     if(entries.length>1)sdrScheduleNextScan(sdrScanToken);
+     else sdrScanTimer=null;
+   }
+ }
+});
+
 document.getElementById("sdrScanBtn")?.addEventListener("click",sdrToggleScan);
 document.getElementById("dialScale")?.addEventListener("click",sdrTuneFromDialEvent);
 window.addEventListener("beforeunload",()=>{
@@ -7083,6 +7172,5 @@ window.CWLATAM={
 connectRBN();
 
 </script>
-<iframe id="cwLatamSdrFrame" allow="autoplay *"></iframe>
 </body>
 </html>
