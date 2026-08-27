@@ -20,6 +20,11 @@ const SUPABASE_URL = String(process.env.SUPABASE_URL || "").trim().replace(/\/+$
 const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
 
 const OPERATOR_TIME_ZONE = String(process.env.OPERATOR_TIME_ZONE || "America/Asuncion").trim();
+/* SDR proxy seguro: navegador HTTPS -> Render HTTPS/WSS -> Kiwi HTTP/WS */
+const SDR_UPSTREAM_HOST = String(process.env.SDR_UPSTREAM_HOST || "pardinho.websdr.com.br").trim();
+const SDR_UPSTREAM_PORT = Number(process.env.SDR_UPSTREAM_PORT || 8073);
+const SDR_PROXY_PREFIX = "/sdr";
+
 const HISTORY_MS = 10 * 60 * 1000;
 const ANALYTICS_MEMORY_MS = 36 * 60 * 60 * 1000;
 const WHATSAPP_ALERT_COOLDOWN_MS = 10 * 60 * 1000;
@@ -398,22 +403,200 @@ function connectRbn(){
 setInterval(()=>{if(!rbn||rbn.destroyed||!rbnConnected)return;if(Date.now()-lastRbnDataAt>RBN_WATCHDOG_MS){console.warn("RBN sin datos 90 s. Reconectando...");try{rbn.destroy()}catch{}}},15000);
 setInterval(()=>{const now=Date.now();for(const [call,ts] of whatsappAlertedCalls)if(now-ts>WHATSAPP_ALERT_COOLDOWN_MS*2)whatsappAlertedCalls.delete(call)},5*60000);
 
+
+function isSdrProxyPath(pathname){
+  return pathname===SDR_PROXY_PREFIX ||
+    pathname.startsWith(SDR_PROXY_PREFIX+"/") ||
+    pathname.startsWith("/kiwi/");
+}
+function sdrUpstreamPath(reqUrl){
+  const u=new URL(reqUrl,"http://localhost");
+  if(u.pathname===SDR_PROXY_PREFIX)return "/"+u.search;
+  if(u.pathname.startsWith(SDR_PROXY_PREFIX+"/")){
+    return (u.pathname.slice(SDR_PROXY_PREFIX.length)||"/")+u.search;
+  }
+  // Kiwi crea WebSockets absolutos /kiwi/<timestamp>/{SND,W/F,EXT}
+  return u.pathname+u.search;
+}
+function cleanProxyRequestHeaders(headers){
+  const out={...headers};
+  delete out.host;
+  delete out.connection;
+  delete out.upgrade;
+  delete out["content-length"];
+  // Pedimos identidad para poder inyectar <base> en HTML de forma segura.
+  out["accept-encoding"]="identity";
+  out.host=`${SDR_UPSTREAM_HOST}:${SDR_UPSTREAM_PORT}`;
+  return out;
+}
+function rewriteProxyResponseHeaders(headers){
+  const out={...headers};
+  delete out["content-security-policy"];
+  delete out["content-security-policy-report-only"];
+  delete out["x-frame-options"];
+  delete out["content-length"];
+  if(out.location){
+    try{
+      const loc=String(out.location);
+      if(loc.startsWith("/"))out.location=SDR_PROXY_PREFIX+loc;
+      else if(/^https?:\/\//i.test(loc)){
+        const u=new URL(loc);
+        if(u.hostname===SDR_UPSTREAM_HOST)out.location=SDR_PROXY_PREFIX+(u.pathname||"/")+u.search;
+      }
+    }catch{}
+  }
+  return out;
+}
+function proxySdrHttp(req,res){
+  const upstreamPath=sdrUpstreamPath(req.url);
+  const options={
+    hostname:SDR_UPSTREAM_HOST,
+    port:SDR_UPSTREAM_PORT,
+    method:req.method,
+    path:upstreamPath,
+    headers:cleanProxyRequestHeaders(req.headers)
+  };
+  const up=http.request(options,upRes=>{
+    const chunks=[];
+    upRes.on("data",c=>chunks.push(c));
+    upRes.on("end",()=>{
+      let body=Buffer.concat(chunks);
+      const headers=rewriteProxyResponseHeaders(upRes.headers);
+      const ct=String(upRes.headers["content-type"]||"").toLowerCase();
+
+      // Mantiene todos los assets y URLs relativos dentro de /sdr/.
+      if(ct.includes("text/html")){
+        let text=body.toString("utf8");
+        if(!/<base\b/i.test(text)){
+          text=text.replace(/<head([^>]*)>/i,'<head$1><base href="/sdr/">');
+        }
+        body=Buffer.from(text,"utf8");
+      }
+
+      headers["content-length"]=String(body.length);
+      res.writeHead(upRes.statusCode||200,headers);
+      res.end(body);
+    });
+  });
+  up.setTimeout(10000,()=>up.destroy(new Error("SDR upstream timeout")));
+  up.on("error",e=>{
+    if(res.headersSent){try{res.end()}catch{};return}
+    res.writeHead(502,{"content-type":"text/plain; charset=utf-8","cache-control":"no-store"});
+    res.end("SDR unavailable");
+    console.error("SDR HTTP proxy:",e.message);
+  });
+  req.pipe(up);
+}
+function proxySdrUpgrade(req,clientSocket,head){
+  const upstreamPath=sdrUpstreamPath(req.url);
+  const headers={...req.headers};
+  headers.host=`${SDR_UPSTREAM_HOST}:${SDR_UPSTREAM_PORT}`;
+  headers.origin=`http://${SDR_UPSTREAM_HOST}:${SDR_UPSTREAM_PORT}`;
+
+  const upReq=http.request({
+    hostname:SDR_UPSTREAM_HOST,
+    port:SDR_UPSTREAM_PORT,
+    method:"GET",
+    path:upstreamPath,
+    headers
+  });
+
+  upReq.on("upgrade",(upRes,upSocket,upHead)=>{
+    let response=`HTTP/1.1 ${upRes.statusCode||101} ${upRes.statusMessage||"Switching Protocols"}\r\n`;
+    for(const [k,v] of Object.entries(upRes.headers)){
+      if(v===undefined)continue;
+      if(Array.isArray(v))for(const item of v)response+=`${k}: ${item}\r\n`;
+      else response+=`${k}: ${v}\r\n`;
+    }
+    response+="\r\n";
+    clientSocket.write(response);
+    if(upHead?.length)clientSocket.write(upHead);
+    if(head?.length)upSocket.write(head);
+    upSocket.pipe(clientSocket);
+    clientSocket.pipe(upSocket);
+
+    const closeBoth=()=>{
+      try{upSocket.destroy()}catch{}
+      try{clientSocket.destroy()}catch{}
+    };
+    upSocket.on("error",closeBoth);
+    clientSocket.on("error",closeBoth);
+  });
+  upReq.on("response",upRes=>{
+    // El Kiwi puede responder HTTP cuando no hay canal disponible.
+    let response=`HTTP/1.1 ${upRes.statusCode||502} ${upRes.statusMessage||"Bad Gateway"}\r\n`;
+    for(const [k,v] of Object.entries(upRes.headers)){
+      if(v===undefined)continue;
+      response+=`${k}: ${Array.isArray(v)?v.join(", "):v}\r\n`;
+    }
+    response+="\r\n";
+    clientSocket.write(response);
+    upRes.pipe(clientSocket);
+  });
+  upReq.setTimeout(10000,()=>upReq.destroy(new Error("SDR WS upstream timeout")));
+  upReq.on("error",e=>{
+    console.error("SDR WS proxy:",e.message);
+    try{clientSocket.write("HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n")}catch{}
+    try{clientSocket.destroy()}catch{}
+  });
+  upReq.end();
+}
+async function sdrTcpStatus(){
+  return await new Promise(resolve=>{
+    const sock=net.createConnection({host:SDR_UPSTREAM_HOST,port:SDR_UPSTREAM_PORT});
+    let done=false;
+    const finish=ok=>{
+      if(done)return;done=true;
+      try{sock.destroy()}catch{}
+      resolve(ok);
+    };
+    sock.setTimeout(2500);
+    sock.on("connect",()=>finish(true));
+    sock.on("timeout",()=>finish(false));
+    sock.on("error",()=>finish(false));
+  });
+}
+
 function corsHeaders(extra={}){return{"access-control-allow-origin":"*","cache-control":"no-store, no-cache, must-revalidate",...extra}}
 const server=http.createServer((req,res)=>{
   const url=new URL(req.url,`http://${req.headers.host||"localhost"}`);
+  if(url.pathname==="/sdr-status"){
+    void sdrTcpStatus().then(ok=>{
+      res.writeHead(ok?200:503,corsHeaders({"content-type":"application/json; charset=utf-8"}));
+      res.end(JSON.stringify({ok,online:ok}));
+    });
+    return;
+  }
+  if(isSdrProxyPath(url.pathname)){
+    proxySdrHttp(req,res);
+    return;
+  }
   if(url.pathname==="/spots"){pruneHistory();let after=Number(url.searchParams.get("after")||0);if(!Number.isFinite(after)||after<0)after=0;const result=history.filter(s=>s.seq>after);res.writeHead(200,corsHeaders({"content-type":"application/json; charset=utf-8"}));res.end(JSON.stringify({ok:true,spots:result,lastSeq:spotSequence,serverTime:Date.now()}));return}
   if(url.pathname==="/operator"){res.writeHead(200,corsHeaders({"content-type":"application/json; charset=utf-8"}));res.end(JSON.stringify({ok:true,...operatorState()}));return}
   if(url.pathname==="/net/latest"){
     const done=async()=>{let out=lastNetSummary,participants=[];if(supabaseConfigured())try{const rows=await sbRequest("cw_nets?select=*&status=eq.closed&order=net_date.desc&limit=1");if(rows?.length){out=rows[0];participants=await sbRequest(`cw_net_participants?select=callsign,country_code,first_seen,last_seen,receiver_count,max_snr,wpm&net_id=eq.${rows[0].id}&order=first_seen.asc&limit=300`)||[]}}catch{}const p=localParts();const showPublicToday=Boolean(out&&p.dow===0&&String(out.net_date||out.date||"")===localDateKey(-1));res.writeHead(200,corsHeaders({"content-type":"application/json; charset=utf-8"}));res.end(JSON.stringify({ok:true,net:out||null,participants,showPublicToday}))};void done();return;
   }
-  if(url.pathname==="/health"){pruneHistory();const st=operatorState();res.writeHead(200,corsHeaders({"content-type":"application/json; charset=utf-8"}));res.end(JSON.stringify({ok:true,live:rbnConnected,websocketClients:clients.size,historySpots:history.length,lastSeq:spotSequence,historyMinutes:10,secondsSinceRbnData:lastRbnDataAt?Math.round((Date.now()-lastRbnDataAt)/1000):null,channel:"7032.9-7033.1",whatsapp:{enabled:WHATSAPP_ENABLED,configured:whatsappConfigured(),destination:safeDestinationLabel(),provider:"GREEN API",alertCooldownMinutes:10,aggregationSeconds:5,digestMinutes:120,sentAlerts:whatsappSentAlerts,sentDigests:whatsappSentDigests,lastAlertAt:whatsappLastAlertAt||null,lastDigestAt:whatsappLastDigestAt||null,lastError:whatsappLastError||null},supabase:{configured:supabaseConfigured(),snapshots:lastSnapshotAt||null},operator:{timeZone:OPERATOR_TIME_ZONE,propagation:st.propagation,next:st.next,lastEvent:operatorLastEvent,lastError:operatorLastError||null},net:st.net}));return}
+  if(url.pathname==="/health"){pruneHistory();const st=operatorState();res.writeHead(200,corsHeaders({"content-type":"application/json; charset=utf-8"}));res.end(JSON.stringify({ok:true,live:rbnConnected,websocketClients:clients.size,historySpots:history.length,lastSeq:spotSequence,historyMinutes:10,secondsSinceRbnData:lastRbnDataAt?Math.round((Date.now()-lastRbnDataAt)/1000):null,channel:"7032.9-7033.1",whatsapp:{enabled:WHATSAPP_ENABLED,configured:whatsappConfigured(),destination:safeDestinationLabel(),provider:"GREEN API",alertCooldownMinutes:10,aggregationSeconds:5,digestMinutes:120,sentAlerts:whatsappSentAlerts,sentDigests:whatsappSentDigests,lastAlertAt:whatsappLastAlertAt||null,lastDigestAt:whatsappLastDigestAt||null,lastError:whatsappLastError||null},supabase:{configured:supabaseConfigured(),snapshots:lastSnapshotAt||null},operator:{timeZone:OPERATOR_TIME_ZONE,propagation:st.propagation,next:st.next,lastEvent:operatorLastEvent,lastError:operatorLastError||null},net:st.net,sdr:{proxy:true,upstream:`${SDR_UPSTREAM_HOST}:${SDR_UPSTREAM_PORT}`,path:SDR_PROXY_PREFIX}}));return}
   res.writeHead(200,corsHeaders({"content-type":"text/plain; charset=utf-8"}));res.end("CW LATAM relay + operator LIVE\n");
 });
 
-const wss=new WebSocketServer({server,perMessageDeflate:false});
+const wss=new WebSocketServer({noServer:true,perMessageDeflate:false});
+
+server.on("upgrade",(req,socket,head)=>{
+  let pathname="/";
+  try{pathname=new URL(req.url,`http://${req.headers.host||"localhost"}`).pathname}catch{}
+  if(isSdrProxyPath(pathname)){
+    proxySdrUpgrade(req,socket,head);
+    return;
+  }
+  wss.handleUpgrade(req,socket,head,ws=>{
+    wss.emit("connection",ws,req);
+  });
+});
+
 wss.on("connection",ws=>{ws.isAlive=true;ws.on("pong",()=>{ws.isAlive=true});clients.add(ws);console.log(`Navegador conectado. Total: ${clients.size}`);ws.send(JSON.stringify({type:"status",live:rbnConnected,ts:Date.now()}));pruneHistory();ws.send(JSON.stringify({type:"history",spots:history,lastSeq:spotSequence}));ws.send(JSON.stringify(operatorState()));ws.on("close",()=>{clients.delete(ws)});ws.on("error",()=>{clients.delete(ws)})});
 const websocketHeartbeat=setInterval(()=>{for(const ws of clients){if(ws.isAlive===false){clients.delete(ws);try{ws.terminate()}catch{};continue}ws.isAlive=false;try{ws.ping()}catch{clients.delete(ws);try{ws.terminate()}catch{}}}},WS_HEARTBEAT_MS);
 const applicationHeartbeat=setInterval(()=>broadcast({type:"heartbeat",ts:Date.now(),live:rbnConnected,lastSeq:spotSequence,operator:{propagation:evaluatePropagation(),net:operatorState().net}}),APP_HEARTBEAT_MS);
 wss.on("close",()=>{clearInterval(websocketHeartbeat);clearInterval(applicationHeartbeat)});
 
-server.listen(PORT,()=>{console.log(`CW LATAM relay activo en puerto ${PORT}`);console.log("WhatsApp:",whatsappConfigured()?`ACTIVO -> ${safeDestinationLabel()}`:"DESACTIVADO / incompleto");console.log("Supabase operator:",supabaseConfigured()?"ACTIVO":"DESACTIVADO / incompleto");console.log("Operator timezone:",OPERATOR_TIME_ZONE);connectRbn();void loadSpaceWeather();setInterval(()=>void loadSpaceWeather(),10*60*1000);void saveSnapshot();void operatorTick();setInterval(()=>void operatorTick(),OPERATOR_TICK_MS)});
+server.listen(PORT,()=>{console.log(`CW LATAM relay activo en puerto ${PORT}`);console.log("WhatsApp:",whatsappConfigured()?`ACTIVO -> ${safeDestinationLabel()}`:"DESACTIVADO / incompleto");console.log("Supabase operator:",supabaseConfigured()?"ACTIVO":"DESACTIVADO / incompleto");console.log("Operator timezone:",OPERATOR_TIME_ZONE);console.log("SDR proxy:",`${SDR_UPSTREAM_HOST}:${SDR_UPSTREAM_PORT} -> ${SDR_PROXY_PREFIX}`);connectRbn();void loadSpaceWeather();setInterval(()=>void loadSpaceWeather(),10*60*1000);void saveSnapshot();void operatorTick();setInterval(()=>void operatorTick(),OPERATOR_TICK_MS)});

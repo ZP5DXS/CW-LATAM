@@ -3362,7 +3362,7 @@ html[data-theme="light"] .prop-badge{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.27-sdr-scan-pt";
+const CWLATAM_BUILD="2026.08.27-sdr-secure-proxy";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -4588,7 +4588,7 @@ function renderActivity(){
 function renderFeed(){}
 
 // ---- SDR AUDIO · DIAL / SCAN --------------------------------------------------
-const SDR_BASE_URL="http://pardinho.websdr.com.br:8073/";
+const SDR_BASE_URL="https://cw-latam.onrender.com/sdr/";
 const SDR_DIAL_MIN=7006;
 const SDR_DIAL_MAX=7060;
 const SDR_HOME_FREQ=7033;
@@ -4606,6 +4606,9 @@ let sdrScanOn=false;
 let sdrCurrentFreq=SDR_HOME_FREQ;
 let sdrScanTimer=null;
 let sdrScanToken=0;
+let sdrConnecting=false;
+let sdrLoadTimer=null;
+let sdrLastError="";
 
 function sdrFrame(){return document.getElementById("cwLatamSdrFrame")}
 function sdrUrl(freq){
@@ -4633,26 +4636,58 @@ function updateSdrUi(){
  const scanLabel=document.getElementById("sdrScanLabel");
  if(scanLabel){
    scanLabel.textContent=sdrScanOn
-     ? (sdrScanSpeed==="LOW"
-         ?"SCAN LENTO"
-         :sdrScanSpeed==="MEDIUM"
-           ?(currentLang==="pt"?"SCAN MÉDIO":"SCAN MEDIO")
-           :"SCAN RÁPIDO")
+     ? (sdrScanSpeed==="LOW"?"SCAN LENTO":sdrScanSpeed==="MEDIUM"?(currentLang==="pt"?"SCAN MÉDIO":"SCAN MEDIO"):"SCAN RÁPIDO")
      : "SCAN";
  }
  if(readout)readout.textContent=`${Number(sdrCurrentFreq).toFixed(1)} kHz`;
- if(mode)mode.textContent=sdrScanOn
-   ?`· ${sdrScanSpeed==="LOW"?"LENTO":sdrScanSpeed==="MEDIUM"?(currentLang==="pt"?"MÉDIO":"MEDIO"):"RÁPIDO"}`
-   :"· MANUAL";
+ if(mode)mode.textContent=sdrScanOn?`· ${sdrScanSpeed==="LOW"?"LENTO":sdrScanSpeed==="MEDIUM"?(currentLang==="pt"?"MÉDIO":"MEDIO"):"RÁPIDO"}`:"· MANUAL";
  if(status){
-   status.className="sdr-status"+(sdrAudioOn?" online":"");
-   status.textContent=sdrAudioOn?"SDR ONLINE":"SDR OFFLINE";
+   const isOnline=sdrAudioOn&&!sdrConnecting&&!sdrLastError;
+   status.className="sdr-status"+(isOnline?" online":(sdrConnecting?" busy":""));
+   status.textContent=!sdrAudioOn
+     ?"SDR OFFLINE"
+     :(sdrConnecting?"SDR CONECTANDO":(sdrLastError?"SDR ERROR":"SDR ONLINE"));
  }
  if(tuneMarker){
    tuneMarker.style.left=`${sdrFreqToPct(sdrCurrentFreq)}%`;
    tuneMarker.classList.toggle("show",sdrAudioOn);
  }
  }
+
+async function sdrProbe(){
+ try{
+   const r=await fetch("https://cw-latam.onrender.com/sdr-status",{cache:"no-store"});
+   return r.ok;
+ }catch{return false}
+}
+function sdrLoad(freq){
+ const frame=sdrFrame();
+ if(!frame||!sdrAudioOn)return;
+ clearTimeout(sdrLoadTimer);
+ sdrConnecting=true;
+ sdrLastError="";
+ updateSdrUi();
+
+ frame.src="about:blank";
+ setTimeout(async()=>{
+   if(!sdrAudioOn)return;
+   const reachable=await sdrProbe();
+   if(!reachable){
+     sdrConnecting=false;
+     sdrLastError="unavailable";
+     updateSdrUi();
+     return;
+   }
+   frame.src=sdrUrl(freq);
+   sdrLoadTimer=setTimeout(()=>{
+     if(!sdrAudioOn||!sdrConnecting)return;
+     sdrConnecting=false;
+     sdrLastError="timeout";
+     updateSdrUi();
+   },12000);
+ },25);
+}
+
 function sdrStopScan(){
  sdrScanOn=false;
  clearTimeout(sdrScanTimer);
@@ -4663,6 +4698,9 @@ function sdrStopScan(){
 function sdrPause(){
  sdrStopScan();
  sdrAudioOn=false;
+ sdrConnecting=false;
+ sdrLastError="";
+ clearTimeout(sdrLoadTimer);
  const frame=sdrFrame();
  if(frame)frame.src="about:blank";
  updateSdrUi();
@@ -4677,14 +4715,7 @@ function sdrTune(freq,{fromScan=false}={}){
  if(typeof renderDial==="function")renderDial();
 
  if(!sdrAudioOn)return;
- const frame=sdrFrame();
- if(!frame)return;
-
- frame.src="about:blank";
- setTimeout(()=>{
-   if(!sdrAudioOn)return;
-   frame.src=sdrUrl(sdrCurrentFreq);
- },25);
+ sdrLoad(sdrCurrentFreq);
 }
 function sdrPlay(){
  if(sdrAudioOn)return;
@@ -4695,8 +4726,7 @@ function sdrPlay(){
  if(typeof renderDial==="function")renderDial();
  if(typeof updateAlertButton==="function")updateAlertButton();
 
- const frame=sdrFrame();
- if(frame)frame.src=sdrUrl(sdrCurrentFreq);
+ sdrLoad(sdrCurrentFreq);
 }
 function sdrTogglePlay(){
  if(sdrAudioOn)sdrPause();
@@ -4862,8 +4892,7 @@ function sdrTuneCall(call){
    if(typeof stopCWAlert==="function")stopCWAlert(true);
    updateSdrUi();
    if(typeof updateAlertButton==="function")updateAlertButton();
-   const frame=sdrFrame();
-   if(frame)frame.src=sdrUrl(sdrCurrentFreq);
+   sdrLoad(sdrCurrentFreq);
    renderDial();
    return;
  }
@@ -4884,8 +4913,7 @@ function sdrTuneFromDialEvent(e){
    if(typeof stopCWAlert==="function")stopCWAlert(true);
    updateSdrUi();
    if(typeof updateAlertButton==="function")updateAlertButton();
-   const frame=sdrFrame();
-   if(frame)frame.src=sdrUrl(sdrCurrentFreq);
+   sdrLoad(sdrCurrentFreq);
    renderDial();
    return;
  }
@@ -4896,6 +4924,10 @@ const _sdrFrame=sdrFrame();
 if(_sdrFrame){
  _sdrFrame.addEventListener("load",()=>{
    if(!_sdrFrame.src||_sdrFrame.src==="about:blank"||!sdrAudioOn)return;
+   clearTimeout(sdrLoadTimer);
+   sdrConnecting=false;
+   sdrLastError="";
+   updateSdrUi();
    if(sdrScanOn){
      const token=sdrScanToken;
      clearTimeout(sdrScanTimer);
@@ -6342,7 +6374,6 @@ function applyLanguage(){
  renderSeasonUI();
  renderActivity();
  if(communityStatsCache)renderFooterStats(communityStatsCache);
- updateSdrUi();
 
  renderPublicRanking();
  renderSeasonUI();}
