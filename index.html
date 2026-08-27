@@ -3362,7 +3362,7 @@ html[data-theme="light"] .prop-badge{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.27-sdr-secure-proxy";
+const CWLATAM_BUILD="2026.08.27-sdr-dedicated-proxy";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -4588,7 +4588,7 @@ function renderActivity(){
 function renderFeed(){}
 
 // ---- SDR AUDIO · DIAL / SCAN --------------------------------------------------
-const SDR_BASE_URL="https://cw-latam.onrender.com/sdr/";
+const SDR_BASE_URL="https://cw-latam-sdr.onrender.com/";
 const SDR_DIAL_MIN=7006;
 const SDR_DIAL_MAX=7060;
 const SDR_HOME_FREQ=7033;
@@ -4620,6 +4620,10 @@ function sdrFreqToPct(freq){
 function sdrClampFreq(freq){
  return Math.max(SDR_DIAL_MIN,Math.min(SDR_DIAL_MAX,Number(freq)||SDR_HOME_FREQ));
 }
+function sdrUiLang(){
+ const stored=String(localStorage.getItem("cwlatam_lang")||document.documentElement.lang||"es").toLowerCase();
+ return stored.startsWith("pt")?"pt":"es";
+}
 function updateSdrUi(){
  const play=document.getElementById("sdrPlayBtn");
  const scan=document.getElementById("sdrScanBtn");
@@ -4636,11 +4640,11 @@ function updateSdrUi(){
  const scanLabel=document.getElementById("sdrScanLabel");
  if(scanLabel){
    scanLabel.textContent=sdrScanOn
-     ? (sdrScanSpeed==="LOW"?"SCAN LENTO":sdrScanSpeed==="MEDIUM"?(currentLang==="pt"?"SCAN MÉDIO":"SCAN MEDIO"):"SCAN RÁPIDO")
+     ? (sdrScanSpeed==="LOW"?"SCAN LENTO":sdrScanSpeed==="MEDIUM"?(sdrUiLang()==="pt"?"SCAN MÉDIO":"SCAN MEDIO"):"SCAN RÁPIDO")
      : "SCAN";
  }
  if(readout)readout.textContent=`${Number(sdrCurrentFreq).toFixed(1)} kHz`;
- if(mode)mode.textContent=sdrScanOn?`· ${sdrScanSpeed==="LOW"?"LENTO":sdrScanSpeed==="MEDIUM"?(currentLang==="pt"?"MÉDIO":"MEDIO"):"RÁPIDO"}`:"· MANUAL";
+ if(mode)mode.textContent=sdrScanOn?`· ${sdrScanSpeed==="LOW"?"LENTO":sdrScanSpeed==="MEDIUM"?(sdrUiLang()==="pt"?"MÉDIO":"MEDIO"):"RÁPIDO"}`:"· MANUAL";
  if(status){
    const isOnline=sdrAudioOn&&!sdrConnecting&&!sdrLastError;
    status.className="sdr-status"+(isOnline?" online":(sdrConnecting?" busy":""));
@@ -4656,7 +4660,7 @@ function updateSdrUi(){
 
 async function sdrProbe(){
  try{
-   const r=await fetch("https://cw-latam.onrender.com/sdr-status",{cache:"no-store"});
+   const r=await fetch("https://cw-latam-sdr.onrender.com/__health",{cache:"no-store"});
    return r.ok;
  }catch{return false}
 }
@@ -6388,6 +6392,7 @@ function applyLanguage(){
    el.value=el.value.toUpperCase().replace(/\s+/g,"");
    try{el.setSelectionRange(start,end)}catch{}
  });
+ if(typeof updateSdrUi==="function")updateSdrUi();
 });
 
 document.getElementById("watchAdd").addEventListener("click",addWatch);
