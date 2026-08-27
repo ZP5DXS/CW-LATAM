@@ -2544,6 +2544,25 @@ html[data-theme="light"] .prop-badge{
     letter-spacing:.07em;
   }
 }
+
+/* ===== FIX FINAL · MI ESTACIÓN ABAJO DEL TODO ===== */
+.my-station-map-btn{
+  top:auto!important;
+  bottom:8px!important;
+  left:8px!important;
+  right:auto!important;
+  z-index:520!important;
+}
+@media(max-width:700px){
+  .my-station-map-btn,
+  .map-wrap.ai-personal .my-station-map-btn{
+    top:auto!important;
+    bottom:8px!important;
+    left:8px!important;
+    right:auto!important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -2856,7 +2875,7 @@ html[data-theme="light"] .prop-badge{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.27-personal-focus-visual2";
+const CWLATAM_BUILD="2026.08.27-my-station-bottom-final";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
