@@ -2779,6 +2779,96 @@ html[data-theme="light"] .prop-badge{
   }
 }
 
+
+/* ===== RELEASE POLISH 2 · MOBILE IA / NET CLEAN / DESKTOP FOOTER ===== */
+
+/* Escritorio: footer con respiración vertical suficiente para no recortar emojis. */
+.footer.footer-pro.footer-minimal{
+  padding-top:10px!important;
+  padding-bottom:6px!important;
+  overflow:visible!important;
+}
+.footer-main,
+.footer-metrics,
+.footer-stat{
+  overflow:visible!important;
+}
+.footer-metrics{
+  min-height:24px!important;
+  align-items:center!important;
+}
+.footer-stat{
+  align-items:center!important;
+  min-height:20px!important;
+  line-height:1.25!important;
+}
+.footer-stat-icon{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:15px!important;
+  height:18px!important;
+  font-size:12px!important;
+  line-height:18px!important;
+  overflow:visible!important;
+  transform:none!important;
+}
+.footer-stat strong,
+.footer-stat span:last-child{
+  line-height:1.2!important;
+}
+.footer-flags{
+  margin-top:2px!important;
+}
+
+/* NET: la jerarquía visual hace innecesarios los textos "último/histórico". */
+.net-stats-head{
+  margin-bottom:7px!important;
+}
+.net-stats-sub{
+  display:none!important;
+}
+.net-history-wrap{
+  display:none;
+  margin-top:11px!important;
+  padding-top:9px!important;
+  border-top:1px solid var(--line);
+}
+.net-history-wrap.has-history{
+  display:block;
+}
+.net-history-label:empty{
+  display:none!important;
+}
+.net-history-list{
+  padding-top:0!important;
+}
+.net-participants-wrap{
+  margin-top:8px!important;
+}
+
+/* Móvil: MI FOCO IA claramente separado de MI ESTACIÓN. */
+@media(max-width:700px){
+  .map-wrap.ai-personal::after{
+    bottom:92px!important;
+    left:50%!important;
+    max-width:calc(100% - 48px)!important;
+  }
+  .map-wrap.ai-personal .my-station-map-btn,
+  .my-station-map-btn{
+    bottom:8px!important;
+  }
+
+  /* Footer móvil: preservamos composición suave sin modificar la pista en movimiento. */
+  .footer.footer-pro.footer-minimal{
+    padding-top:9px!important;
+  }
+  .footer-stat-icon{
+    height:17px!important;
+    line-height:17px!important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -2975,7 +3065,7 @@ html[data-theme="light"] .prop-badge{
       <div class="net-stats-head">
         <div>
           <div class="leaderboard-title">📻 LXCW NET CONTROL</div>
-          <div class="net-stats-sub">ÚLTIMO NET + HISTÓRICO</div>
+          
         </div>
         <div class="net-stats-status" id="netStatsStatus">CARGANDO…</div>
       </div>
@@ -2985,7 +3075,7 @@ html[data-theme="light"] .prop-badge{
       </div>
 
       <div class="net-history-wrap">
-        <div class="net-history-label">HISTÓRICO</div>
+        
         <div class="net-history-list" id="netHistoryList">
           <span class="net-history-empty">—</span>
         </div>
@@ -3118,7 +3208,7 @@ html[data-theme="light"] .prop-badge{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.27-net-history-mobile-polish1";
+const CWLATAM_BUILD="2026.08.27-net-clean-footer-polish2";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -6113,12 +6203,21 @@ async function loadNetHistory(){
     if(status)status.textContent=netHistoryCache.length?`${netHistoryCache.length} NET${netHistoryCache.length===1?"":"S"}`:"SIN DATOS";
     if(!netHistoryCache.length){
       renderNetSummaryCard(null);
-      hist.innerHTML='<span class="net-history-empty">El primer NET aparecerá aquí.</span>';
+      hist.innerHTML="";
+      hist.closest(".net-history-wrap")?.classList.remove("has-history");
       document.getElementById("netParticipantsWrap").style.display="none";
       return;
     }
     const latest=netHistoryCache[0];
-    hist.innerHTML=netHistoryCache.map((n,i)=>`<button type="button" class="net-history-btn${i===0?" active":""}" data-net-id="${n.id}" onclick="selectNetHistory('${n.id}')">${escapeHtml(netDateLabel(n.net_date))} · ${Number(n.participants||0)}</button>`).join("");
+    const historyWrap=hist.closest(".net-history-wrap");
+    const previousNets=netHistoryCache.slice(1);
+    if(previousNets.length){
+      if(historyWrap)historyWrap.classList.add("has-history");
+      hist.innerHTML=previousNets.map(n=>`<button type="button" class="net-history-btn" data-net-id="${n.id}" onclick="selectNetHistory('${n.id}')">${escapeHtml(netDateLabel(n.net_date))} · ${Number(n.participants||0)}</button>`).join("");
+    }else{
+      if(historyWrap)historyWrap.classList.remove("has-history");
+      hist.innerHTML="";
+    }
     const target=netHistoryCache.find(n=>String(n.id)===String(selectedNetId))||latest;
     selectedNetId=target.id;
     renderNetSummaryCard(target);
