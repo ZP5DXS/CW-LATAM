@@ -2563,6 +2563,19 @@ html[data-theme="light"] .prop-badge{
   }
 }
 
+
+/* ===== OPERATOR + LXCW NET CONTROL ===== */
+.net-control-bar{display:none;margin:7px 8px 0;padding:8px 10px;border:1px solid rgba(255,78,78,.42);border-radius:10px;background:linear-gradient(90deg,rgba(110,8,8,.22),rgba(20,5,5,.08));box-shadow:0 0 18px rgba(255,50,50,.08);font:800 8px ui-monospace,SFMono-Regular,Menlo,monospace}
+.net-control-bar.show{display:flex;align-items:center;justify-content:space-between;gap:9px}
+.net-control-live{color:#ff6868;letter-spacing:.08em;white-space:nowrap}.net-control-metrics{color:var(--muted);text-align:right;white-space:nowrap}
+.net-weekend-card{display:none;margin:7px 8px 0;padding:9px 10px;border:1px solid rgba(255,200,92,.26);border-radius:10px;background:linear-gradient(90deg,rgba(255,200,92,.055),transparent);font-size:8px}
+.net-weekend-card.show{display:block}.net-weekend-title{font-weight:900;color:var(--amber);letter-spacing:.08em}.net-weekend-summary{margin-top:4px;color:var(--muted)}
+.net-weekend-list{margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;max-height:62px;overflow:auto;scrollbar-width:none}.net-weekend-list::-webkit-scrollbar{display:none}.net-weekend-call{border:1px solid var(--line);border-radius:999px;padding:3px 6px;font:800 7px ui-monospace,monospace;color:var(--text)}
+.chat-msg.operator{border-left:3px solid rgba(88,255,146,.72);background:linear-gradient(90deg,rgba(88,255,146,.07),transparent 55%),var(--panel2)}
+.chat-msg.operator.net{border-left-color:#ff6161;background:linear-gradient(90deg,rgba(255,55,55,.08),transparent 58%),var(--panel2)}.chat-msg.operator .chat-call{cursor:default}
+.map-wrap.ai-personal::after{bottom:34px!important;z-index:508!important}
+@media(max-width:700px){.map-wrap.ai-personal::after{bottom:34px!important;left:50%!important;max-width:calc(100% - 36px)!important;width:max-content;z-index:508!important}.map-wrap.ai-personal .leaflet-control-attribution{margin-bottom:0!important;max-width:54%;font-size:6px!important}.my-station-map-btn,.map-wrap.ai-personal .my-station-map-btn{bottom:8px!important}.net-control-bar.show{align-items:flex-start;flex-direction:column}.net-control-metrics{text-align:left}}
+
 </style>
 </head>
 <body>
@@ -2693,6 +2706,8 @@ html[data-theme="light"] .prop-badge{
     <button type="button" class="side-tab" id="tabStats" style="display:none">ESTADÍSTICAS</button>
     <button type="button" class="side-tab" id="tabRewards" style="display:none">RECOMPENSAS</button>
   </div>
+  <div class="net-control-bar" id="netControlBar"><span class="net-control-live" id="netControlLive">● LXCW NET CONTROL</span><span class="net-control-metrics" id="netControlMetrics">—</span></div>
+  <div class="net-weekend-card" id="netWeekendCard"><div class="net-weekend-title" id="netWeekendTitle">📻 LXCW NET CONTROL · RESULTADOS</div><div class="net-weekend-summary" id="netWeekendSummary">—</div><div class="net-weekend-list" id="netWeekendList"></div></div>
 
   <div class="side-view active" id="viewActivity">
     <div class="rank-glance" id="rankGlance"></div>
@@ -2875,7 +2890,7 @@ html[data-theme="light"] .prop-badge{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.27-my-station-bottom-final";
+const CWLATAM_BUILD="2026.08.27-operator-net-control1";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -5080,61 +5095,28 @@ function activatePersonalFocus(){
 async function loadChat(){
  try{
    const since=new Date(Date.now()-24*60*60*1000).toISOString();
-   const {data}=await sb.from("cw_chat_messages")
-     .select("id,callsign_snapshot,country_code,message,created_at,is_bot,event_type,metadata")
-     .gte("created_at",since)
-     .order("created_at",{ascending:false})
-     .limit(80);
-   renderChat((data||[]).reverse());
+   const [chatRes,operatorRes]=await Promise.allSettled([
+     sb.from("cw_chat_messages").select("id,callsign_snapshot,country_code,message,created_at,is_bot,event_type,metadata").gte("created_at",since).order("created_at",{ascending:false}).limit(80),
+     sb.from("cw_operator_events").select("id,event_key,event_type,title,message,metadata,created_at").gte("created_at",since).order("created_at",{ascending:false}).limit(60)
+   ]);
+   const chat=chatRes.status==="fulfilled"?(chatRes.value.data||[]):[];
+   const ops=operatorRes.status==="fulfilled"?(operatorRes.value.data||[]).map(x=>{if(x.event_key)seenOperatorEventKeys.add(String(x.event_key));return {...x,id:`op-${x.id}`,is_operator:true,is_bot:true,callsign_snapshot:x.title||"CW BOT",country_code:null}}):[];
+   renderChat([...chat,...ops].sort((a,b)=>new Date(a.created_at)-new Date(b.created_at)));
    setTimeout(botLiveInsight,0);
  }catch{}
 }
-
-function renderChat(messages){
- const el=document.getElementById("chatList");
- if(!messages?.length){
-   el.innerHTML='<div class="empty">Todavía no hay mensajes.</div>';
-   return;
- }
-
- el.innerHTML=messages.map(m=>{
-   const bot=Boolean(m.is_bot);
-   const kind=m.event_type==="summary"?" summary":"";
-   const cls=bot?`chat-msg bot${kind}`:"chat-msg";
-   const who=bot
-     ? `<span class="chat-call">CW BOT</span>`
-     : `<span class="chat-call" onclick="openQRZ('${m.callsign_snapshot}')">${m.callsign_snapshot} ↗</span>`;
-   const flag=bot?"🤖":countryFlag(m.country_code);
-
-   return `<div class="${cls}" data-chat-id="${m.id}">
-     <div class="chat-head">${flag} ${who} · ${new Date(m.created_at).toISOString().slice(11,16)} UTC</div>
-     <div class="chat-text">${escapeHtml(m.message)}</div>
-   </div>`;
- }).join("");
-
- el.scrollTop=el.scrollHeight;
+function operatorChatText(s){return escapeHtml(s).replace(/\*/g,"").replace(/\n/g,"<br>")}
+function chatCardHtml(m){
+ const operator=Boolean(m.is_operator),bot=Boolean(m.is_bot)||operator,net=operator&&String(m.title||"").toUpperCase().includes("NET CONTROL");
+ const kind=m.event_type==="summary"?" summary":"",cls=operator?`chat-msg operator${net?" net":""}${kind}`:(bot?`chat-msg bot${kind}`:"chat-msg");
+ const who=bot?`<span class="chat-call">${escapeHtml(m.title||m.callsign_snapshot||"CW BOT")}</span>`:`<span class="chat-call" onclick="openQRZ('${m.callsign_snapshot}')">${m.callsign_snapshot} ↗</span>`;
+ const flag=operator?(net?"📻":"🤖"):(bot?"🤖":countryFlag(m.country_code));
+ const text=operator?operatorChatText(m.message):escapeHtml(m.message);
+ return `<div class="${cls}" data-chat-id="${m.id}"><div class="chat-head">${flag} ${who} · ${new Date(m.created_at).toISOString().slice(11,16)} UTC</div><div class="chat-text">${text}</div></div>`;
 }
-function appendChat(m){
- const el=document.getElementById("chatList");
- if(el.querySelector(`[data-chat-id="${m.id}"]`))return;
- if(el.querySelector(".empty"))el.innerHTML="";
-
- const bot=Boolean(m.is_bot);
- const kind=m.event_type==="summary"?" summary":"";
- const cls=bot?`chat-msg bot${kind}`:"chat-msg";
- const who=bot
-   ? `<span class="chat-call">CW BOT</span>`
-   : `<span class="chat-call" onclick="openQRZ('${m.callsign_snapshot}')">${m.callsign_snapshot} ↗</span>`;
- const flag=bot?"🤖":countryFlag(m.country_code);
-
- el.insertAdjacentHTML("beforeend",`
-   <div class="${cls}" data-chat-id="${m.id}">
-     <div class="chat-head">${flag} ${who} · ${new Date(m.created_at).toISOString().slice(11,16)} UTC</div>
-     <div class="chat-text">${escapeHtml(m.message)}</div>
-   </div>`);
-
- el.scrollTop=el.scrollHeight;
-}
+function renderChat(messages){const el=document.getElementById("chatList");if(!messages?.length){el.innerHTML='<div class="empty">Todavía no hay mensajes.</div>';return}el.innerHTML=messages.map(chatCardHtml).join("");el.scrollTop=el.scrollHeight}
+function appendChat(m){const el=document.getElementById("chatList");if(el.querySelector(`[data-chat-id="${m.id}"]`))return;if(el.querySelector(".empty"))el.innerHTML="";el.insertAdjacentHTML("beforeend",chatCardHtml(m));el.scrollTop=el.scrollHeight}
+function appendOperatorEvent(e){if(!e)return;const key=String(e.eventKey||e.event_key||"");if(key&&seenOperatorEventKeys.has(key))return;if(key)seenOperatorEventKeys.add(key);appendChat({id:`live-op-${key||e.ts||Date.now()}`,is_operator:true,is_bot:true,title:e.title||"CW BOT",message:e.message||"",event_type:e.eventType||e.event_type||"operator",metadata:e.metadata||{},created_at:new Date(e.ts||e.created_at||Date.now()).toISOString()})}
 function escapeHtml(s){
  return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 }
@@ -5156,6 +5138,9 @@ function subscribeChat(){
    .on("postgres_changes",{event:"INSERT",schema:"public",table:"cw_chat_messages"},payload=>appendChat(payload.new))
    .subscribe();
 }
+let operatorChannel=null;
+function subscribeOperatorEvents(){if(operatorChannel)return;operatorChannel=sb.channel("cw-latam-operator").on("postgres_changes",{event:"INSERT",schema:"public",table:"cw_operator_events"},payload=>appendOperatorEvent({...payload.new,eventKey:payload.new.event_key,eventType:payload.new.event_type,title:payload.new.title,ts:new Date(payload.new.created_at).getTime()})).subscribe()}
+subscribeOperatorEvents();
 
 
 setTimeout(loadKnownStationLocations,1200);
@@ -5792,6 +5777,21 @@ document.getElementById("alertToggle").addEventListener("click",()=>{
 
 updateAlertButton();
 
+
+// ---- OPERADOR PROACTIVO / LXCW NET CONTROL ------------------------------------
+let operatorStateCache=null;
+const seenOperatorEventKeys=new Set();
+function renderOperatorState(state){
+ if(!state)return;operatorStateCache=state;const net=state.net||{},bar=document.getElementById("netControlBar"),live=document.getElementById("netControlLive"),metrics=document.getElementById("netControlMetrics");
+ if(bar){const show=Boolean(net.active);bar.classList.toggle("show",show);if(live)live.textContent=show?"● LXCW NET CONTROL · EN EL AIRE":"● LXCW NET CONTROL";if(metrics)metrics.textContent=show?`${Number(net.participants||0)} CHECK-INS · ${Number(net.countries||0)} PAÍSES · ${Number(net.receivers||0)} RECEPTORES`:"—"}
+}
+async function loadOperatorState(){try{const r=await fetch("https://cw-latam.onrender.com/operator",{cache:"no-store"});if(r.ok)renderOperatorState(await r.json())}catch{}}
+async function loadWeekendNet(){
+ try{const r=await fetch("https://cw-latam.onrender.com/net/latest",{cache:"no-store"});if(!r.ok)return;const x=await r.json(),card=document.getElementById("netWeekendCard");if(!card)return;card.classList.toggle("show",Boolean(x.showPublicToday&&x.net));if(!(x.showPublicToday&&x.net))return;const n=x.net,parts=Array.isArray(x.participants)?x.participants:[];document.getElementById("netWeekendTitle").textContent=`📻 LXCW NET CONTROL · ${n.net_date||"SÁBADO"}`;document.getElementById("netWeekendSummary").textContent=`${Number(n.participants||parts.length)} estaciones · ${Number(n.countries||0)} países · ${Number(n.receivers||0)} receptores`;document.getElementById("netWeekendList").innerHTML=parts.map(p=>`<span class="net-weekend-call">${countryFlag(p.country_code)} ${escapeHtml(p.callsign)} · ${Number(p.receiver_count||0)} RX</span>`).join("")}
+ catch{}
+}
+setTimeout(()=>{loadOperatorState();loadWeekendNet()},900);setInterval(loadOperatorState,60000);setInterval(loadWeekendNet,5*60000);
+
 // ---- EN VIVO RBN INPUT ---------------------------------------------------------
 // GitHub Pages cannot open telnet.reversebeacon.net:7000 directly.
 // Set this to the public WSS URL of the tiny relay included with this package.
@@ -5881,7 +5881,16 @@ function connectRBN(){
      try{
        const payload=JSON.parse(ev.data);
 
+       if(payload && payload.type==="operator_event"){
+         appendOperatorEvent(payload.event);
+         return;
+       }
+       if(payload && payload.type==="operator"){
+         renderOperatorState(payload);
+         return;
+       }
        if(payload && payload.type==="heartbeat"){
+         if(payload.operator)renderOperatorState({...(operatorStateCache||{}),propagation:payload.operator.propagation,net:payload.operator.net});
          if(document.getElementById("liveState")?.textContent!=="EN VIVO"){
            setLiveState("EN VIVO");
          }
