@@ -2292,6 +2292,45 @@ html[data-theme="light"] .prop-badge{
   .prop-window{font-size:6px}
 }
 
+
+/* ===== FINAL POLISH · FLAGS LOOP + MOBILE PROP POSITION ===== */
+.footer-flags .country-roll-track{
+  min-width:max-content!important;
+  padding-left:100%!important;
+  animation:countryTicker 34s linear infinite!important;
+  will-change:transform;
+}
+.country-roll:hover .country-roll-track{
+  animation-play-state:running!important;
+}
+
+@media(max-width:700px){
+  /* Propagación debajo de REGIÓN / FOCO / MI FOCO, sin superponer controles. */
+  .prop-badge{
+    left:8px!important;
+    right:auto!important;
+    top:139px!important;
+    min-width:176px!important;
+    max-width:205px!important;
+    padding:7px 8px!important;
+  }
+
+  /* Si aparece la ayuda de FOCO, baja por debajo del indicador de propagación. */
+  .focus-note{
+    top:226px!important;
+    max-width:245px!important;
+  }
+
+  /* MI ESTACIÓN también baja para no competir por el mismo espacio. */
+  .my-station-map-btn{
+    top:226px!important;
+  }
+
+  body.has-profile .focus-note{
+    top:264px!important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -2604,7 +2643,7 @@ html[data-theme="light"] .prop-badge{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.26-propagation-stable1.1";
+const CWLATAM_BUILD="2026.08.27-mobile-prop-flags1";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -4877,7 +4916,11 @@ async function loadCountryStats(){
    )];
 
    // Sólo banderas: sin nombres, códigos ni cantidad por país.
-   track.textContent=items.concat(items).join("   ");
+   // Repetimos las disponibles suficientes veces para que el carrusel
+   // nunca quede vacío ni parezca frenarse cuando todavía hay pocos países.
+   const repeats=Math.max(4,Math.ceil(18/Math.max(1,items.length)));
+   const loopItems=Array.from({length:repeats},()=>items).flat();
+   track.textContent=loopItems.join("   ");
    if(communityStatsCache)renderFooterStats(communityStatsCache);
  }catch{}
 }
