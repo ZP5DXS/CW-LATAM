@@ -2576,6 +2576,209 @@ html[data-theme="light"] .prop-badge{
 .map-wrap.ai-personal::after{bottom:34px!important;z-index:508!important}
 @media(max-width:700px){.map-wrap.ai-personal::after{bottom:34px!important;left:50%!important;max-width:calc(100% - 36px)!important;width:max-content;z-index:508!important}.map-wrap.ai-personal .leaflet-control-attribution{margin-bottom:0!important;max-width:54%;font-size:6px!important}.my-station-map-btn,.map-wrap.ai-personal .my-station-map-btn{bottom:8px!important}.net-control-bar.show{align-items:flex-start;flex-direction:column}.net-control-metrics{text-align:left}}
 
+
+/* ===== RELEASE POLISH · MI FOCO / NET HISTORY / MOBILE FLAGS ===== */
+
+/* Separación visual clara entre MI ESTACIÓN y el estado rojo de MI FOCO. */
+.map-wrap.ai-personal::after{
+  bottom:52px!important;
+}
+@media(max-width:700px){
+  .map-wrap.ai-personal::after{
+    bottom:48px!important;
+    max-width:calc(100% - 70px)!important;
+  }
+}
+
+/* NET dentro de ESTADÍSTICAS */
+.net-stats-block{
+  margin-top:auto;
+  padding-top:12px!important;
+  padding-bottom:12px!important;
+  background:
+    radial-gradient(circle at 100% 0%,rgba(255,200,92,.04),transparent 46%),
+    linear-gradient(180deg,rgba(255,255,255,.008),transparent);
+}
+.net-stats-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+.net-stats-sub{
+  margin-top:2px;
+  color:var(--muted);
+  font:800 6.5px ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.1em;
+}
+.net-stats-status{
+  border:1px solid rgba(88,255,146,.18);
+  border-radius:999px;
+  padding:4px 7px;
+  color:var(--green);
+  font:900 6px ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.08em;
+  white-space:nowrap;
+}
+.net-latest-card{
+  border:1px solid rgba(255,200,92,.18);
+  border-radius:11px;
+  background:linear-gradient(145deg,rgba(255,200,92,.035),rgba(255,255,255,.008));
+  padding:9px;
+}
+.net-latest-top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:8px;
+}
+.net-latest-name{
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.04em;
+}
+.net-latest-date{
+  margin-top:2px;
+  color:var(--muted);
+  font:800 6.5px ui-monospace,monospace;
+}
+.net-latest-frequency{
+  color:var(--amber);
+  font:900 8px ui-monospace,monospace;
+  white-space:nowrap;
+}
+.net-latest-metrics{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:5px;
+  margin-top:8px;
+}
+.net-mini-metric{
+  min-width:0;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:6px 4px;
+  text-align:center;
+  background:rgba(255,255,255,.012);
+}
+.net-mini-metric b{
+  display:block;
+  color:var(--text);
+  font:900 10px ui-monospace,monospace;
+}
+.net-mini-metric span{
+  display:block;
+  margin-top:2px;
+  color:var(--muted);
+  font:800 5.8px ui-sans-serif,system-ui;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+.net-latest-best{
+  display:flex;
+  gap:6px 12px;
+  flex-wrap:wrap;
+  margin-top:7px;
+  color:var(--muted);
+  font:800 6.5px ui-monospace,monospace;
+}
+.net-latest-best b{color:var(--green)}
+.net-history-wrap{margin-top:10px}
+.net-history-label{
+  color:var(--muted);
+  font:900 6.5px ui-sans-serif,system-ui;
+  letter-spacing:.12em;
+  margin-bottom:5px;
+}
+.net-history-list{
+  display:flex;
+  gap:5px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  padding-bottom:2px;
+  scrollbar-width:none;
+}
+.net-history-list::-webkit-scrollbar{display:none}
+.net-history-btn{
+  flex:0 0 auto;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:rgba(255,255,255,.012);
+  color:var(--muted);
+  padding:5px 7px;
+  cursor:pointer;
+  font:900 6.5px ui-monospace,monospace;
+  white-space:nowrap;
+}
+.net-history-btn:hover,
+.net-history-btn.active{
+  color:var(--amber);
+  border-color:rgba(255,200,92,.3);
+  background:rgba(255,200,92,.045);
+}
+.net-history-empty{
+  color:var(--muted);
+  font:800 7px ui-monospace,monospace;
+}
+.net-participants-wrap{
+  margin-top:9px;
+  padding-top:8px;
+  border-top:1px solid var(--line);
+}
+.net-participants-list{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:4px;
+  max-height:120px;
+  overflow-y:auto;
+  scrollbar-width:none;
+}
+.net-participants-list::-webkit-scrollbar{display:none}
+.net-participant{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:5px;
+  align-items:center;
+  padding:5px 6px;
+  border-radius:7px;
+  background:rgba(255,255,255,.014);
+  font-size:7px;
+}
+.net-participant-call{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-weight:900;
+}
+.net-participant-rx{
+  color:var(--green);
+  font:900 6.5px ui-monospace,monospace;
+}
+@media(max-width:700px){
+  .net-latest-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .net-participants-list{grid-template-columns:1fr}
+}
+
+/* El carrusel no se reconstruye si los países no cambiaron.
+   Estas propiedades reducen glitches de composición en Safari móvil. */
+.footer-flags .country-roll-track{
+  transform:translateZ(0);
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  perspective:1000px;
+}
+.footer-flags .country-loop{
+  transform:translateZ(0);
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+@media(max-width:700px){
+  .footer-flags .country-roll-track{
+    animation-duration:18s!important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -2707,7 +2910,6 @@ html[data-theme="light"] .prop-badge{
     <button type="button" class="side-tab" id="tabRewards" style="display:none">RECOMPENSAS</button>
   </div>
   <div class="net-control-bar" id="netControlBar"><span class="net-control-live" id="netControlLive">● LXCW NET CONTROL</span><span class="net-control-metrics" id="netControlMetrics">—</span></div>
-  <div class="net-weekend-card" id="netWeekendCard"><div class="net-weekend-title" id="netWeekendTitle">📻 LXCW NET CONTROL · RESULTADOS</div><div class="net-weekend-summary" id="netWeekendSummary">—</div><div class="net-weekend-list" id="netWeekendList"></div></div>
 
   <div class="side-view active" id="viewActivity">
     <div class="rank-glance" id="rankGlance"></div>
@@ -2767,6 +2969,32 @@ html[data-theme="light"] .prop-badge{
     <div class="stats-block contextual-rank" id="contextualRankBlock" style="display:none">
       <div class="leaderboard-title">TU POSICIÓN</div>
       <div class="public-rank-list" id="contextualRankList"></div>
+    </div>
+
+    <div class="stats-block net-stats-block" id="netStatsBlock">
+      <div class="net-stats-head">
+        <div>
+          <div class="leaderboard-title">📻 LXCW NET CONTROL</div>
+          <div class="net-stats-sub">ÚLTIMO NET + HISTÓRICO</div>
+        </div>
+        <div class="net-stats-status" id="netStatsStatus">CARGANDO…</div>
+      </div>
+
+      <div class="net-latest-card" id="netLatestCard">
+        <div class="empty compact">Todavía no hay resultados de NET disponibles.</div>
+      </div>
+
+      <div class="net-history-wrap">
+        <div class="net-history-label">HISTÓRICO</div>
+        <div class="net-history-list" id="netHistoryList">
+          <span class="net-history-empty">—</span>
+        </div>
+      </div>
+
+      <div class="net-participants-wrap" id="netParticipantsWrap" style="display:none">
+        <div class="net-history-label" id="netParticipantsTitle">PARTICIPANTES</div>
+        <div class="net-participants-list" id="netParticipantsList"></div>
+      </div>
     </div>
   </div>
 
@@ -2890,7 +3118,7 @@ html[data-theme="light"] .prop-badge{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.27-operator-net-control1";
+const CWLATAM_BUILD="2026.08.27-net-history-mobile-polish1";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -4584,6 +4812,7 @@ function setSideTab(name){
    document.getElementById(tabId)?.classList.toggle("active",key===name);
    document.getElementById(viewId)?.classList.toggle("active",key===name);
  }
+ if(name==="stats")void loadNetHistory();
 }
 
 function rankRowHTML(x,meCall=""){
@@ -5155,9 +5384,13 @@ async function loadCountryStats(){
 
    if(!countryStatsCache.length){
      const fallback=["🌎","🇵🇾","🇦🇷","🇧🇷","🇺🇾","🇨🇱"];
-     const seq=Array.from({length:4},()=>fallback).flat();
-     const content=seq.map(flag=>`<span>${flag}</span>`).join("");
-     track.innerHTML=`<span class="country-loop">${content}</span><span class="country-loop" aria-hidden="true">${content}</span>`;
+     const signature=`fallback:${fallback.join("|")}`;
+     if(track.dataset.signature!==signature){
+       const seq=Array.from({length:4},()=>fallback).flat();
+       const content=seq.map(flag=>`<span>${flag}</span>`).join("");
+       track.innerHTML=`<span class="country-loop">${content}</span><span class="country-loop" aria-hidden="true">${content}</span>`;
+       track.dataset.signature=signature;
+     }
      if(communityStatsCache)renderFooterStats(communityStatsCache);
      return;
    }
@@ -5172,10 +5405,14 @@ async function loadCountryStats(){
    // construimos una secuencia suficientemente larga y la duplicamos.
    // La animación se desplaza exactamente media pista, por lo que la segunda
    // copia reemplaza a la primera sin hueco ni "reset" visible.
-   const repeats=Math.max(6,Math.ceil(24/Math.max(1,items.length)));
-   const seq=Array.from({length:repeats},()=>items).flat();
-   const content=seq.map(flag=>`<span>${flag}</span>`).join("");
-   track.innerHTML=`<span class="country-loop">${content}</span><span class="country-loop" aria-hidden="true">${content}</span>`;
+   const signature=`countries:${items.join("|")}`;
+   if(track.dataset.signature!==signature){
+     const repeats=Math.max(6,Math.ceil(24/Math.max(1,items.length)));
+     const seq=Array.from({length:repeats},()=>items).flat();
+     const content=seq.map(flag=>`<span>${flag}</span>`).join("");
+     track.innerHTML=`<span class="country-loop">${content}</span><span class="country-loop" aria-hidden="true">${content}</span>`;
+     track.dataset.signature=signature;
+   }
    if(communityStatsCache)renderFooterStats(communityStatsCache);
  }catch{}
 }
@@ -5786,11 +6023,117 @@ function renderOperatorState(state){
  if(bar){const show=Boolean(net.active);bar.classList.toggle("show",show);if(live)live.textContent=show?"● LXCW NET CONTROL · EN EL AIRE":"● LXCW NET CONTROL";if(metrics)metrics.textContent=show?`${Number(net.participants||0)} CHECK-INS · ${Number(net.countries||0)} PAÍSES · ${Number(net.receivers||0)} RECEPTORES`:"—"}
 }
 async function loadOperatorState(){try{const r=await fetch("https://cw-latam.onrender.com/operator",{cache:"no-store"});if(r.ok)renderOperatorState(await r.json())}catch{}}
-async function loadWeekendNet(){
- try{const r=await fetch("https://cw-latam.onrender.com/net/latest",{cache:"no-store"});if(!r.ok)return;const x=await r.json(),card=document.getElementById("netWeekendCard");if(!card)return;card.classList.toggle("show",Boolean(x.showPublicToday&&x.net));if(!(x.showPublicToday&&x.net))return;const n=x.net,parts=Array.isArray(x.participants)?x.participants:[];document.getElementById("netWeekendTitle").textContent=`📻 LXCW NET CONTROL · ${n.net_date||"SÁBADO"}`;document.getElementById("netWeekendSummary").textContent=`${Number(n.participants||parts.length)} estaciones · ${Number(n.countries||0)} países · ${Number(n.receivers||0)} receptores`;document.getElementById("netWeekendList").innerHTML=parts.map(p=>`<span class="net-weekend-call">${countryFlag(p.country_code)} ${escapeHtml(p.callsign)} · ${Number(p.receiver_count||0)} RX</span>`).join("")}
- catch{}
+let netHistoryCache=[];
+let selectedNetId=null;
+
+function netDateLabel(v){
+  if(!v)return "—";
+  const d=new Date(`${String(v).slice(0,10)}T12:00:00`);
+  if(Number.isNaN(d.getTime()))return String(v);
+  return new Intl.DateTimeFormat(currentLang==="pt"?"pt-BR":"es-PY",{
+    day:"2-digit",month:"short",year:"numeric"
+  }).format(d).replace(".","");
 }
-setTimeout(()=>{loadOperatorState();loadWeekendNet()},900);setInterval(loadOperatorState,60000);setInterval(loadWeekendNet,5*60000);
+function netSnr(v){
+  const n=Number(v);
+  if(!Number.isFinite(n))return "—";
+  return `${n>=0?"+":""}${Math.round(n)} dB`;
+}
+function renderNetSummaryCard(n){
+  const card=document.getElementById("netLatestCard");
+  if(!card)return;
+  if(!n){
+    card.innerHTML='<div class="empty compact">Todavía no hay resultados de NET disponibles.</div>';
+    return;
+  }
+  card.innerHTML=`
+    <div class="net-latest-top">
+      <div>
+        <div class="net-latest-name">LXCW NET CONTROL</div>
+        <div class="net-latest-date">${escapeHtml(netDateLabel(n.net_date))}</div>
+      </div>
+      <div class="net-latest-frequency">7.033 MHz</div>
+    </div>
+    <div class="net-latest-metrics">
+      <div class="net-mini-metric"><b>${Number(n.participants||0)}</b><span>Estaciones</span></div>
+      <div class="net-mini-metric"><b>${Number(n.countries||0)}</b><span>Países</span></div>
+      <div class="net-mini-metric"><b>${Number(n.receivers||0)}</b><span>Receptores</span></div>
+      <div class="net-mini-metric"><b>${Number(n.reports||0)}</b><span>Reportes</span></div>
+    </div>
+    <div class="net-latest-best">
+      <span>🏆 Cobertura <b>${escapeHtml(n.widest_call||"—")}</b>${Number(n.widest_receivers||0)>0?` · ${Number(n.widest_receivers)} RX`:""}</span>
+      <span>⚡ Señal <b>${escapeHtml(n.best_call||"—")}</b> · ${netSnr(n.best_snr)}</span>
+    </div>`;
+}
+async function loadNetParticipants(netId,netDate){
+  const wrap=document.getElementById("netParticipantsWrap");
+  const list=document.getElementById("netParticipantsList");
+  const title=document.getElementById("netParticipantsTitle");
+  if(!wrap||!list)return;
+  try{
+    const {data,error}=await sb.from("cw_net_participants")
+      .select("callsign,country_code,receiver_count,max_snr,wpm,first_seen")
+      .eq("net_id",netId)
+      .order("first_seen",{ascending:true})
+      .limit(300);
+    if(error)throw error;
+    const rows=Array.isArray(data)?data:[];
+    title.textContent=`PARTICIPANTES · ${netDateLabel(netDate)}`;
+    list.innerHTML=rows.length
+      ? rows.map(p=>`<div class="net-participant">
+          <span class="net-participant-call">${countryFlag(p.country_code)} ${escapeHtml(p.callsign)}</span>
+          <span class="net-participant-rx">${Number(p.receiver_count||0)} RX · ${netSnr(p.max_snr)}</span>
+        </div>`).join("")
+      : '<div class="net-history-empty">Sin participantes registrados.</div>';
+    wrap.style.display="block";
+  }catch{
+    wrap.style.display="none";
+  }
+}
+async function selectNetHistory(netId){
+  const n=netHistoryCache.find(x=>String(x.id)===String(netId));
+  if(!n)return;
+  selectedNetId=n.id;
+  renderNetSummaryCard(n);
+  document.querySelectorAll(".net-history-btn").forEach(b=>b.classList.toggle("active",String(b.dataset.netId)===String(n.id)));
+  await loadNetParticipants(n.id,n.net_date);
+}
+async function loadNetHistory(){
+  const status=document.getElementById("netStatsStatus");
+  const hist=document.getElementById("netHistoryList");
+  if(!hist)return;
+  try{
+    const {data,error}=await sb.from("cw_nets")
+      .select("id,net_date,status,participants,countries,receivers,reports,best_call,best_snr,widest_call,widest_receivers")
+      .eq("status","closed")
+      .order("net_date",{ascending:false})
+      .limit(10);
+    if(error)throw error;
+    netHistoryCache=Array.isArray(data)?data:[];
+    if(status)status.textContent=netHistoryCache.length?`${netHistoryCache.length} NET${netHistoryCache.length===1?"":"S"}`:"SIN DATOS";
+    if(!netHistoryCache.length){
+      renderNetSummaryCard(null);
+      hist.innerHTML='<span class="net-history-empty">El primer NET aparecerá aquí.</span>';
+      document.getElementById("netParticipantsWrap").style.display="none";
+      return;
+    }
+    const latest=netHistoryCache[0];
+    hist.innerHTML=netHistoryCache.map((n,i)=>`<button type="button" class="net-history-btn${i===0?" active":""}" data-net-id="${n.id}" onclick="selectNetHistory('${n.id}')">${escapeHtml(netDateLabel(n.net_date))} · ${Number(n.participants||0)}</button>`).join("");
+    const target=netHistoryCache.find(n=>String(n.id)===String(selectedNetId))||latest;
+    selectedNetId=target.id;
+    renderNetSummaryCard(target);
+    await loadNetParticipants(target.id,target.net_date);
+  }catch{
+    if(status)status.textContent="NO DISPONIBLE";
+  }
+}
+async function loadWeekendNet(){
+  // Compatibilidad: el resumen público vive ahora en ESTADÍSTICAS.
+  await loadNetHistory();
+}
+setTimeout(()=>{loadOperatorState();loadNetHistory()},900);
+setInterval(loadOperatorState,60000);
+setInterval(loadNetHistory,5*60000);
 
 // ---- EN VIVO RBN INPUT ---------------------------------------------------------
 // GitHub Pages cannot open telnet.reversebeacon.net:7000 directly.
