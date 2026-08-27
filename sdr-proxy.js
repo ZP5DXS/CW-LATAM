@@ -132,6 +132,9 @@ function upstreamHeaders(headers) {
 }
 
 function proxyHttp(req, res) {
+  let upstreamResponded = false;
+  let responseFinished = false;
+
   const up = http.request(
     {
       hostname: SDR_UPSTREAM_HOST,
@@ -141,6 +144,8 @@ function proxyHttp(req, res) {
       headers: upstreamHeaders(req.headers)
     },
     upRes => {
+      upstreamResponded = true;
+      up.setTimeout(0);
       const headers = { ...upRes.headers };
 
       delete headers["x-frame-options"];
@@ -248,13 +253,17 @@ function proxyHttp(req, res) {
           delete headers["content-encoding"];
           headers["content-length"]=String(out.length);
           headers["cache-control"]="no-store";
-          res.writeHead(upRes.statusCode||200,headers);
+          if(responseFinished || res.writableEnded)return;
+          responseFinished = true;
+          if(!res.headersSent)res.writeHead(upRes.statusCode||200,headers);
           res.end(out);
         });
         return;
       }
 
-      res.writeHead(upRes.statusCode || 200, headers);
+      if(responseFinished || res.writableEnded)return;
+      responseFinished = true;
+      if(!res.headersSent)res.writeHead(upRes.statusCode || 200, headers);
       upRes.pipe(res);
     }
   );
@@ -266,6 +275,13 @@ function proxyHttp(req, res) {
   up.on("error", err => {
     console.error("SDR HTTP:", err.message);
 
+    // Si Kiwi ya empezó a responder, no podemos enviar otro HTTP response.
+    // Cerramos únicamente el upstream y dejamos que la respuesta existente termine.
+    if (upstreamResponded || responseFinished || res.headersSent || res.writableEnded) {
+      return;
+    }
+
+    responseFinished = true;
     if (!res.headersSent) {
       res.writeHead(502, {
         "content-type": "text/plain; charset=utf-8",
