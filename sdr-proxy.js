@@ -132,6 +132,17 @@ function upstreamHeaders(headers) {
 }
 
 function proxyHttp(req, res) {
+  let replied = false;
+  let upstreamStarted = false;
+
+  const finishOnce = (statusCode, headers, body) => {
+    if (replied || res.headersSent || res.writableEnded) return false;
+    replied = true;
+    res.writeHead(statusCode, headers);
+    res.end(body);
+    return true;
+  };
+
   const up = http.request(
     {
       hostname: SDR_UPSTREAM_HOST,
@@ -141,22 +152,32 @@ function proxyHttp(req, res) {
       headers: upstreamHeaders(req.headers)
     },
     upRes => {
-      const headers = { ...upRes.headers };
+      upstreamStarted = true;
+      up.setTimeout(0);
 
+      const headers = { ...upRes.headers };
       delete headers["x-frame-options"];
       delete headers["content-security-policy"];
       delete headers["content-security-policy-report-only"];
 
-      const contentType=String(upRes.headers["content-type"]||"").toLowerCase();
+      const contentType = String(upRes.headers["content-type"] || "").toLowerCase();
 
-      // Para HTML de Kiwi necesitamos inyectar el desbloqueo Safari/iOS
-      // ANTES de que Kiwi cree su AudioContext.
-      if(contentType.includes("text/html")){
-        const chunks=[];
-        upRes.on("data",c=>chunks.push(c));
-        upRes.on("end",()=>{
-          let body=Buffer.concat(chunks).toString("utf8");
-          body=body.replace(/<head([^>]*)>/i, `<head$1><script>
+      // HTML Kiwi: bufferizamos, inyectamos el desbloqueo Safari/iOS
+      // y respondemos UNA sola vez.
+      if (contentType.includes("text/html")) {
+        const chunks = [];
+        let bodyEnded = false;
+
+        upRes.on("data", c => {
+          if (!bodyEnded) chunks.push(c);
+        });
+
+        upRes.on("end", () => {
+          if (bodyEnded || replied || res.headersSent || res.writableEnded) return;
+          bodyEnded = true;
+
+          let body = Buffer.concat(chunks).toString("utf8");
+          body = body.replace(/<head([^>]*)>/i, `<head$1><script>
 (function(){
   const ua=navigator.userAgent||"";
   const vendor=navigator.vendor||"";
@@ -266,37 +287,64 @@ function proxyHttp(req, res) {
   });
 })();
 </script>`);
-          const out=Buffer.from(body,"utf8");
+
+          const out = Buffer.from(body, "utf8");
           delete headers["content-length"];
           delete headers["content-encoding"];
-          headers["content-length"]=String(out.length);
-          headers["cache-control"]="no-store";
-          res.writeHead(upRes.statusCode||200,headers);
-          res.end(out);
+          headers["content-length"] = String(out.length);
+          headers["cache-control"] = "no-store";
+
+          finishOnce(upRes.statusCode || 200, headers, out);
         });
+
+        upRes.on("error", err => {
+          console.error("SDR upstream HTML:", err.message);
+          if (!replied && !res.headersSent && !res.writableEnded) {
+            finishOnce(502, {
+              "content-type": "text/plain; charset=utf-8",
+              "cache-control": "no-store"
+            }, "SDR unavailable");
+          }
+        });
+
         return;
       }
 
+      // No HTML: streaming transparente.
+      if (replied || res.headersSent || res.writableEnded) {
+        try { upRes.destroy(); } catch {}
+        return;
+      }
+
+      replied = true;
       res.writeHead(upRes.statusCode || 200, headers);
       upRes.pipe(res);
+
+      upRes.on("error", err => {
+        console.error("SDR upstream stream:", err.message);
+        try { res.destroy(err); } catch {}
+      });
     }
   );
 
   up.setTimeout(15000, () => {
+    if (upstreamStarted) return;
     up.destroy(new Error("upstream timeout"));
   });
 
   up.on("error", err => {
     console.error("SDR HTTP:", err.message);
 
-    if (!res.headersSent) {
-      res.writeHead(502, {
+    if (!replied && !res.headersSent && !res.writableEnded) {
+      finishOnce(502, {
         "content-type": "text/plain; charset=utf-8",
         "cache-control": "no-store"
-      });
+      }, "SDR unavailable");
     }
+  });
 
-    res.end("SDR unavailable");
+  req.on("aborted", () => {
+    try { up.destroy(); } catch {}
   });
 
   req.pipe(up);
