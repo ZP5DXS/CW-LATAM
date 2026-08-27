@@ -3362,7 +3362,7 @@ html[data-theme="light"] .prop-badge{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.27-sdr-stability1";
+const CWLATAM_BUILD="2026.08.27-sdr-user-gesture1";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -4680,7 +4680,7 @@ async function sdrProbe(force=false){
    return false;
  }
 }
-function sdrLoad(freq){
+function sdrLoad(freq,{userGesture=false}={}){
  const frame=sdrFrame();
  if(!frame||!sdrAudioOn)return;
 
@@ -4694,39 +4694,55 @@ function sdrLoad(freq){
  const hadSession=sdrHasSession;
  sdrHasSession=false;
 
- // Rompe primero la sesión anterior. Kiwi puede tardar un poco en liberar
- // el canal/IP: 25 ms era demasiado agresivo y generaba conexiones duplicadas.
- frame.src="about:blank";
-
- const releaseDelay=hadSession?SDR_RELEASE_MS:SDR_INITIAL_CONNECT_MS;
-
- setTimeout(async()=>{
-   if(!sdrAudioOn||seq!==sdrLoadSeq)return;
-
-   // Solo hacemos probe de vez en cuando. No retrasamos cada salto del SCAN.
-   const reachable=await sdrProbe(false);
-   if(!sdrAudioOn||seq!==sdrLoadSeq)return;
-
-   if(!reachable){
-     sdrConnecting=false;
-     sdrLastError="unavailable";
-     updateSdrUi();
-     return;
-   }
-
+ // En el primer PLAY, cargar Kiwi inmediatamente dentro del click/tap.
+ // No await, fetch ni setTimeout antes de frame.src: así Safari conserva
+ // la activación del usuario necesaria para audio en iframe cross-origin.
+ if(userGesture && !hadSession){
    frame.src=sdrUrl(freq);
    sdrHasSession=true;
 
-   // Cross-origin no nos permite saber exactamente cuándo empezó el audio.
-   // Por eso NO declaramos ERROR por tiempo. Si el backend está accesible y
-   // cargamos Kiwi, luego de una gracia corta mostramos ONLINE.
+   // Health queda sólo como diagnóstico paralelo, nunca bloquea audio.
+   void sdrProbe(false).then(ok=>{
+     if(!ok && sdrAudioOn && seq===sdrLoadSeq){
+       sdrLastError="unavailable";
+       sdrConnecting=false;
+       updateSdrUi();
+     }
+   });
+
+   sdrLoadTimer=setTimeout(()=>{
+     if(!sdrAudioOn||seq!==sdrLoadSeq)return;
+     sdrConnecting=false;
+     if(!sdrLastError)updateSdrUi();
+   },SDR_ONLINE_GRACE_MS);
+   return;
+ }
+
+ // En resintonización sí liberamos primero la sesión Kiwi anterior.
+ frame.src="about:blank";
+ const releaseDelay=hadSession?SDR_RELEASE_MS:SDR_INITIAL_CONNECT_MS;
+
+ setTimeout(()=>{
+   if(!sdrAudioOn||seq!==sdrLoadSeq)return;
+
+   // No esperar /__health antes de navegar: el probe corre aparte.
+   frame.src=sdrUrl(freq);
+   sdrHasSession=true;
+
+   void sdrProbe(false).then(ok=>{
+     if(!ok && sdrAudioOn && seq===sdrLoadSeq){
+       sdrLastError="unavailable";
+       sdrConnecting=false;
+       updateSdrUi();
+     }
+   });
+
    sdrLoadTimer=setTimeout(()=>{
      if(!sdrAudioOn||seq!==sdrLoadSeq)return;
      sdrConnecting=false;
      sdrLastError="";
      updateSdrUi();
 
-     // En SCAN el tiempo útil empieza luego de esta estabilización.
      if(sdrScanOn){
        const token=sdrScanToken;
        const entries=sdrScanEntries();
@@ -4736,7 +4752,6 @@ function sdrLoad(freq){
    },SDR_ONLINE_GRACE_MS);
  },releaseDelay);
 }
-
 function sdrStopScan(){
  sdrScanOn=false;
  clearTimeout(sdrScanTimer);
@@ -4777,7 +4792,7 @@ function sdrPlay(){
  if(typeof renderDial==="function")renderDial();
  if(typeof updateAlertButton==="function")updateAlertButton();
 
- sdrLoad(sdrCurrentFreq);
+ sdrLoad(sdrCurrentFreq,{userGesture:true});
 }
 function sdrTogglePlay(){
  if(sdrAudioOn)sdrPause();
@@ -4943,7 +4958,7 @@ function sdrTuneCall(call){
    if(typeof stopCWAlert==="function")stopCWAlert(true);
    updateSdrUi();
    if(typeof updateAlertButton==="function")updateAlertButton();
-   sdrLoad(sdrCurrentFreq);
+   sdrLoad(sdrCurrentFreq,{userGesture:true});
    renderDial();
    return;
  }
@@ -4964,7 +4979,7 @@ function sdrTuneFromDialEvent(e){
    if(typeof stopCWAlert==="function")stopCWAlert(true);
    updateSdrUi();
    if(typeof updateAlertButton==="function")updateAlertButton();
-   sdrLoad(sdrCurrentFreq);
+   sdrLoad(sdrCurrentFreq,{userGesture:true});
    renderDial();
    return;
  }
@@ -7068,6 +7083,6 @@ window.CWLATAM={
 connectRBN();
 
 </script>
-<iframe id="cwLatamSdrFrame" allow="autoplay"></iframe>
+<iframe id="cwLatamSdrFrame" allow="autoplay *"></iframe>
 </body>
 </html>
