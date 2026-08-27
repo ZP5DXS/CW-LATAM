@@ -3989,6 +3989,8 @@ map.on("moveend zoomend",()=>{
  }
 });
 
+let activityLatestSeenTs=0;
+
 function renderActivity(){
  refreshFooterLiveStats();
  const el=document.getElementById("decodeStream");
@@ -4004,9 +4006,16 @@ function renderActivity(){
      const aChannel=Boolean(a[1].isChannel);
      const bChannel=Boolean(b[1].isChannel);
 
+     // Jerarquía persistente de ACTIVIDAD:
+     // 1) 7033 / alerta máxima siempre arriba.
+     // 2) Todo lo demás por actividad más reciente primero.
+     // Así una señal nueva entra inmediatamente debajo de 7033 y las viejas bajan.
      if(aChannel!==bChannel)return bChannel?1:-1;
-     if(aChannel&&bChannel)return b[1].last-a[1].last;
 
+     const recentDiff=b[1].last-a[1].last;
+     if(recentDiff!==0)return recentDiff;
+
+     // Desempates solamente: no deben alterar el orden cronológico principal.
      if(personalMode){
        const pa=Number(a[4]?.probability||0);
        const pb=Number(b[4]?.probability||0);
@@ -4023,15 +4032,15 @@ function renderActivity(){
      const spotterDiff=b[1].spotters.size-a[1].spotters.size;
      if(spotterDiff!==0)return spotterDiff;
 
-     const recentDiff=b[1].last-a[1].last;
-     if(recentDiff!==0)return recentDiff;
-
      return (b[1].totalSpots||0)-(a[1].totalSpots||0);
    });
 
  const visibleRows=rows;
+ const newestActivityTs=visibleRows.reduce((max,row)=>Math.max(max,Number(row[1].last||0)),0);
+ const hasNewActivity=newestActivityTs>activityLatestSeenTs;
 
  if(!visibleRows.length){
+   activityLatestSeenTs=0;
    el.innerHTML=`<div class="empty">${t("waitingCW")}</div>`;
    return;
  }
@@ -4078,6 +4087,16 @@ function renderActivity(){
      </div>
    </div>`;
  }).join("");
+
+ // Auto-scroll sólo cuando entra actividad realmente nueva (no en cada refresco de edad).
+ // Mantiene visible 7033 arriba y coloca la novedad inmediatamente debajo.
+ if(hasNewActivity){
+   const behavior=activityLatestSeenTs>0?"smooth":"auto";
+   activityLatestSeenTs=newestActivityTs;
+   requestAnimationFrame(()=>el.scrollTo({top:0,behavior}));
+ }else if(!activityLatestSeenTs){
+   activityLatestSeenTs=newestActivityTs;
+ }
 }
 function renderFeed(){}
 function renderDial(){
