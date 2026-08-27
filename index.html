@@ -2293,12 +2293,31 @@ html[data-theme="light"] .prop-badge{
 }
 
 
-/* ===== FINAL POLISH · FLAGS LOOP + MOBILE PROP POSITION ===== */
+/* ===== FINAL POLISH · SEAMLESS FLAGS + MOBILE PROP POSITION ===== */
+.footer-flags{
+  overflow:hidden!important;
+}
 .footer-flags .country-roll-track{
-  min-width:max-content!important;
-  padding-left:100%!important;
-  animation:countryTicker 34s linear infinite!important;
+  display:flex!important;
+  width:max-content!important;
+  min-width:0!important;
+  padding-left:0!important;
+  white-space:nowrap!important;
+  animation:countryTickerSeamless 30s linear infinite!important;
   will-change:transform;
+}
+.footer-flags .country-loop{
+  display:flex;
+  flex:0 0 auto;
+  align-items:center;
+  gap:16px;
+  padding-right:16px;
+  white-space:nowrap;
+  font-family:system-ui,"Apple Color Emoji","Segoe UI Emoji",sans-serif;
+}
+@keyframes countryTickerSeamless{
+  from{transform:translate3d(0,0,0)}
+  to{transform:translate3d(-50%,0,0)}
 }
 .country-roll:hover .country-roll-track{
   animation-play-state:running!important;
@@ -2328,6 +2347,30 @@ html[data-theme="light"] .prop-badge{
 
   body.has-profile .focus-note{
     top:264px!important;
+  }
+}
+
+
+/* MOBILE footer: nunca crear ancho fantasma al final de la página */
+@media(max-width:700px){
+  html,body{overflow-x:hidden!important}
+  .footer.footer-pro.footer-minimal{
+    width:100%!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+  }
+  .footer-flags{
+    width:100%!important;
+    max-width:100vw!important;
+    flex:0 0 17px!important;
+    min-width:0!important;
+  }
+  .footer-flags .country-roll-track{
+    max-width:none!important;
+  }
+  .footer-flags .country-loop{
+    gap:14px;
+    padding-right:14px;
   }
 }
 
@@ -2643,7 +2686,7 @@ html[data-theme="light"] .prop-badge{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.27-mobile-prop-flags1";
+const CWLATAM_BUILD="2026.08.27-seamless-flags-mobile1";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -4904,7 +4947,10 @@ async function loadCountryStats(){
    const track=document.getElementById("countryRollTrack");
 
    if(!countryStatsCache.length){
-     track.textContent="🌎 LATAM";
+     const fallback=["🌎","🇵🇾","🇦🇷","🇧🇷","🇺🇾","🇨🇱"];
+     const seq=Array.from({length:4},()=>fallback).flat();
+     const content=seq.map(flag=>`<span>${flag}</span>`).join("");
+     track.innerHTML=`<span class="country-loop">${content}</span><span class="country-loop" aria-hidden="true">${content}</span>`;
      if(communityStatsCache)renderFooterStats(communityStatsCache);
      return;
    }
@@ -4915,12 +4961,14 @@ async function loadCountryStats(){
        .filter(Boolean)
    )];
 
-   // Sólo banderas: sin nombres, códigos ni cantidad por país.
-   // Repetimos las disponibles suficientes veces para que el carrusel
-   // nunca quede vacío ni parezca frenarse cuando todavía hay pocos países.
-   const repeats=Math.max(4,Math.ceil(18/Math.max(1,items.length)));
-   const loopItems=Array.from({length:repeats},()=>items).flat();
-   track.textContent=loopItems.join("   ");
+   // Marquee realmente continuo:
+   // construimos una secuencia suficientemente larga y la duplicamos.
+   // La animación se desplaza exactamente media pista, por lo que la segunda
+   // copia reemplaza a la primera sin hueco ni "reset" visible.
+   const repeats=Math.max(6,Math.ceil(24/Math.max(1,items.length)));
+   const seq=Array.from({length:repeats},()=>items).flat();
+   const content=seq.map(flag=>`<span>${flag}</span>`).join("");
+   track.innerHTML=`<span class="country-loop">${content}</span><span class="country-loop" aria-hidden="true">${content}</span>`;
    if(communityStatsCache)renderFooterStats(communityStatsCache);
  }catch{}
 }
