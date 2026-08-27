@@ -2253,8 +2253,12 @@ html[data-theme="light"] .my-station-map-btn:hover{
   letter-spacing:.09em;
   color:var(--green)
 }
-.prop-badge[data-state="excellent"] .prop-dot,
-.prop-badge[data-state="excellent"] .prop-state{color:#65ff9e;background:#65ff9e}
+.prop-badge[data-state="excellent"] .prop-dot{background:#65ff9e}
+.prop-badge[data-state="excellent"] .prop-state{
+  color:#65ff9e;
+  background:transparent!important;
+  text-shadow:0 0 9px rgba(101,255,158,.22)
+}
 .prop-badge[data-state="good"] .prop-dot{background:#58ff92}
 .prop-badge[data-state="good"] .prop-state{color:#58ff92}
 .prop-badge[data-state="fair"] .prop-dot{background:#ffd36b}
@@ -2371,6 +2375,85 @@ html[data-theme="light"] .prop-badge{
   .footer-flags .country-loop{
     gap:14px;
     padding-right:14px;
+  }
+}
+
+
+/* ===== IA MAP STATE + MOBILE COLLISION FIX ===== */
+.map-wrap.ai-active{
+  box-shadow:inset 0 0 42px rgba(88,255,146,.08);
+}
+.map-wrap.ai-active::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:432;
+  pointer-events:none;
+  opacity:.34;
+  background:
+    linear-gradient(rgba(88,255,146,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(88,255,146,.035) 1px,transparent 1px);
+  background-size:34px 34px;
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.85),rgba(0,0,0,.2));
+  animation:aiGridDrift 14s linear infinite;
+}
+.map-wrap.ai-active::after{
+  content:"IA · ANÁLISIS ACTIVO";
+  position:absolute;
+  left:50%;
+  bottom:12px;
+  z-index:503;
+  transform:translateX(-50%);
+  pointer-events:none;
+  padding:4px 8px;
+  border:1px solid rgba(88,255,146,.22);
+  border-radius:999px;
+  background:rgba(3,14,8,.72);
+  color:rgba(120,255,165,.72);
+  font:900 6.5px ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.13em;
+  backdrop-filter:blur(5px);
+  box-shadow:0 0 22px rgba(88,255,146,.08);
+}
+.map-wrap.ai-personal::after{
+  content:"IA · MI FOCO ACTIVO";
+  color:#8affb1;
+  border-color:rgba(88,255,146,.32);
+}
+@keyframes aiGridDrift{
+  from{background-position:0 0,0 0}
+  to{background-position:34px 34px,34px 34px}
+}
+
+@media(max-width:700px){
+  /* Carrusel más vivo en móvil. */
+  .footer-flags .country-roll-track{
+    animation-duration:15s!important;
+  }
+
+  /* FOCO 1500 km ocupa su propia línea visual. */
+  .focus-note{
+    top:226px!important;
+    left:8px!important;
+    right:auto!important;
+    width:min(245px,calc(100% - 16px))!important;
+    max-width:245px!important;
+    z-index:506!important;
+  }
+
+  /* MI ESTACIÓN baja sólo cuando el aviso de FOCO está visible. */
+  .my-station-map-btn{
+    top:226px!important;
+    z-index:505!important;
+  }
+  .map-wrap.focus-ai .my-station-map-btn{
+    top:284px!important;
+  }
+
+  .map-wrap.ai-active::after{
+    bottom:8px;
+    font-size:5.8px;
+    letter-spacing:.09em;
   }
 }
 
@@ -2686,7 +2769,7 @@ html[data-theme="light"] .prop-badge{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.27-seamless-flags-mobile1";
+const CWLATAM_BUILD="2026.08.27-ai-map-mobile-polish1";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -3595,6 +3678,15 @@ let focusCircle=null;
 
 let focusMode=false;
 let personalMode=false;
+
+function updateMapIntelligenceVisual(){
+ const wrap=document.querySelector(".map-wrap");
+ if(!wrap)return;
+ wrap.classList.toggle("ai-active",Boolean(focusMode||personalMode));
+ wrap.classList.toggle("focus-ai",Boolean(focusMode));
+ wrap.classList.toggle("ai-personal",Boolean(personalMode));
+}
+
 const personalScores=new Map();
 let personalFocusTimer=null;
 let personalFocusRequestSeq=0;
@@ -3744,6 +3836,7 @@ async function checkDbSchema(){
 function setFocusMode(on,persist=true){
  focusMode=Boolean(on);
  personalMode=false;
+ updateMapIntelligenceVisual();
 
  document.getElementById("globalBtn").classList.toggle("active",!focusMode);
  document.getElementById("focusBtn").classList.toggle("active",focusMode);
@@ -4845,6 +4938,7 @@ function activatePersonalFocus(){
  }
  personalMode=true;
  focusMode=false;
+ updateMapIntelligenceVisual();
  if(focusCircle){map.removeLayer(focusCircle);focusCircle=null}
  document.getElementById("focusCross").classList.remove("show");
  document.getElementById("focusNote").classList.remove("show");
@@ -5328,7 +5422,8 @@ document.getElementById("profileCancel2").addEventListener("click",closeProfileM
 document.getElementById("profileContinue").addEventListener("click",()=>profileAction("identify"));
 document.getElementById("profileSave").addEventListener("click",()=>profileAction("update"));
 document.getElementById("profileLogout").addEventListener("click",()=>{
- sessionToken="";currentProfile=null;personalMode=false;personalScores.clear();votedCalls.clear();watchlist.clear();watchAlertedCalls.clear();
+ sessionToken="";currentProfile=null;personalMode=false;focusMode=false;personalScores.clear();votedCalls.clear();watchlist.clear();watchAlertedCalls.clear();
+ updateMapIntelligenceVisual();
  setSideTab("activity");seasonStatusCache=null;seasonLeaderboardCache=null;
  localStorage.removeItem("cwlatam_profile_token");
  updateProfileUI();closeProfileModal();renderActivity();
@@ -5346,6 +5441,7 @@ document.getElementById("langToggle").addEventListener("click",()=>{
 });
 
 (async()=>{
+ updateMapIntelligenceVisual();
  void checkDbSchema();
  setSideTab("activity");
  await recordVisit();
