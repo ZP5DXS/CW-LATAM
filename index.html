@@ -3362,7 +3362,7 @@ html[data-theme="light"] .prop-badge{
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CWLATAM_BUILD="2026.08.27-sdr-dedicated-proxy";
+const CWLATAM_BUILD="2026.08.27-sdr-stability1";
 console.info("CW LATAM build",CWLATAM_BUILD);
 const ACTIVE_MS=10*60*1000;
 const TRAIL_MS=2*60*1000; // trazas visuales; la actividad sigue viva 10 min
@@ -4599,6 +4599,10 @@ const SDR_SCAN_SPEEDS={
   FAST:10000
 };
 const SDR_SCAN_SPEED_ORDER=["LOW","MEDIUM","FAST"];
+const SDR_RELEASE_MS=1800;          // deja que Kiwi libere la sesión anterior
+const SDR_INITIAL_CONNECT_MS=80;    // primer PLAY: no hay sesión previa que liberar
+const SDR_ONLINE_GRACE_MS=3500;     // estado visual; NO es timeout de audio
+const SDR_PROBE_CACHE_MS=60000;     // no golpear __health en cada salto
 let sdrScanSpeed="MEDIUM";
 
 let sdrAudioOn=false;
@@ -4609,6 +4613,10 @@ let sdrScanToken=0;
 let sdrConnecting=false;
 let sdrLoadTimer=null;
 let sdrLastError="";
+let sdrLoadSeq=0;
+let sdrLastProbeAt=0;
+let sdrLastProbeOk=false;
+let sdrHasSession=false;
 
 function sdrFrame(){return document.getElementById("cwLatamSdrFrame")}
 function sdrUrl(freq){
@@ -4658,38 +4666,75 @@ function updateSdrUi(){
  }
  }
 
-async function sdrProbe(){
+async function sdrProbe(force=false){
+ const now=Date.now();
+ if(!force && now-sdrLastProbeAt<SDR_PROBE_CACHE_MS)return sdrLastProbeOk;
  try{
    const r=await fetch("https://cw-latam-sdr.onrender.com/__health",{cache:"no-store"});
+   sdrLastProbeAt=Date.now();
+   sdrLastProbeOk=r.ok;
    return r.ok;
- }catch{return false}
+ }catch{
+   sdrLastProbeAt=Date.now();
+   sdrLastProbeOk=false;
+   return false;
+ }
 }
 function sdrLoad(freq){
  const frame=sdrFrame();
  if(!frame||!sdrAudioOn)return;
+
+ const seq=++sdrLoadSeq;
  clearTimeout(sdrLoadTimer);
+
  sdrConnecting=true;
  sdrLastError="";
  updateSdrUi();
 
+ const hadSession=sdrHasSession;
+ sdrHasSession=false;
+
+ // Rompe primero la sesión anterior. Kiwi puede tardar un poco en liberar
+ // el canal/IP: 25 ms era demasiado agresivo y generaba conexiones duplicadas.
  frame.src="about:blank";
+
+ const releaseDelay=hadSession?SDR_RELEASE_MS:SDR_INITIAL_CONNECT_MS;
+
  setTimeout(async()=>{
-   if(!sdrAudioOn)return;
-   const reachable=await sdrProbe();
+   if(!sdrAudioOn||seq!==sdrLoadSeq)return;
+
+   // Solo hacemos probe de vez en cuando. No retrasamos cada salto del SCAN.
+   const reachable=await sdrProbe(false);
+   if(!sdrAudioOn||seq!==sdrLoadSeq)return;
+
    if(!reachable){
      sdrConnecting=false;
      sdrLastError="unavailable";
      updateSdrUi();
      return;
    }
+
    frame.src=sdrUrl(freq);
+   sdrHasSession=true;
+
+   // Cross-origin no nos permite saber exactamente cuándo empezó el audio.
+   // Por eso NO declaramos ERROR por tiempo. Si el backend está accesible y
+   // cargamos Kiwi, luego de una gracia corta mostramos ONLINE.
    sdrLoadTimer=setTimeout(()=>{
-     if(!sdrAudioOn||!sdrConnecting)return;
+     if(!sdrAudioOn||seq!==sdrLoadSeq)return;
      sdrConnecting=false;
-     sdrLastError="timeout";
+     sdrLastError="";
      updateSdrUi();
-   },12000);
- },25);
+
+     // En SCAN el tiempo útil empieza luego de esta estabilización.
+     if(sdrScanOn){
+       const token=sdrScanToken;
+       const entries=sdrScanEntries();
+       if(entries.length>1)sdrScheduleNextScan(token);
+       else sdrScanTimer=null;
+     }
+   },SDR_ONLINE_GRACE_MS);
+ },releaseDelay);
 }
 
 function sdrStopScan(){
@@ -4704,6 +4749,8 @@ function sdrPause(){
  sdrAudioOn=false;
  sdrConnecting=false;
  sdrLastError="";
+ sdrHasSession=false;
+ sdrLoadSeq++;
  clearTimeout(sdrLoadTimer);
  const frame=sdrFrame();
  if(frame)frame.src="about:blank";
@@ -4822,7 +4869,7 @@ function sdrScanNext(token=sdrScanToken){
  clearTimeout(sdrScanTimer);
  sdrScanTimer=setTimeout(()=>{
    if(sdrAudioOn&&sdrScanOn&&token===sdrScanToken)sdrScanNext(token);
- },sdrCurrentDwell()+SDR_SCAN_SETTLE_MS+5000);
+ },sdrCurrentDwell()+SDR_RELEASE_MS+SDR_ONLINE_GRACE_MS);
 }
 function sdrStartScan(){
  if(!sdrAudioOn)sdrPlay();
@@ -4855,7 +4902,7 @@ function sdrStartScan(){
  updateSdrUi();
 
  // El load del iframe rearma el tiempo útil; fallback por seguridad.
- sdrScanTimer=setTimeout(()=>sdrScanNext(token),sdrCurrentDwell()+SDR_SCAN_SETTLE_MS+5000);
+ sdrScanTimer=setTimeout(()=>sdrScanNext(token),sdrCurrentDwell()+SDR_RELEASE_MS+SDR_ONLINE_GRACE_MS);
 }
 function sdrToggleScan(){
  if(!sdrScanOn){
@@ -4928,10 +4975,16 @@ const _sdrFrame=sdrFrame();
 if(_sdrFrame){
  _sdrFrame.addEventListener("load",()=>{
    if(!_sdrFrame.src||_sdrFrame.src==="about:blank"||!sdrAudioOn)return;
+
+   // El load ayuda a confirmar antes el estado, pero no es obligatorio:
+   // algunos Kiwi mantienen recursos/conexiones abiertas y el evento no es
+   // una señal fiable de que el audio ya empezó o dejó de empezar.
    clearTimeout(sdrLoadTimer);
    sdrConnecting=false;
    sdrLastError="";
+   sdrHasSession=true;
    updateSdrUi();
+
    if(sdrScanOn){
      const token=sdrScanToken;
      clearTimeout(sdrScanTimer);
