@@ -132,34 +132,147 @@ function upstreamHeaders(headers) {
 }
 
 function proxyHttp(req, res) {
-  const up = http.request({
-    hostname: SDR_UPSTREAM_HOST,
-    port: SDR_UPSTREAM_PORT,
-    method: req.method,
-    path: req.url,
-    headers: upstreamHeaders(req.headers)
-  }, upRes => {
-    const headers = { ...upRes.headers };
+  const up = http.request(
+    {
+      hostname: SDR_UPSTREAM_HOST,
+      port: SDR_UPSTREAM_PORT,
+      method: req.method,
+      path: req.url,
+      headers: upstreamHeaders(req.headers)
+    },
+    upRes => {
+      const headers = { ...upRes.headers };
 
-    // No permitimos que el upstream bloquee el iframe de CW LATAM.
-    delete headers["x-frame-options"];
-    delete headers["content-security-policy"];
-    delete headers["content-security-policy-report-only"];
+      delete headers["x-frame-options"];
+      delete headers["content-security-policy"];
+      delete headers["content-security-policy-report-only"];
 
-    res.writeHead(upRes.statusCode || 200, headers);
-    upRes.pipe(res);
+      const contentType=String(upRes.headers["content-type"]||"").toLowerCase();
+
+      // Para HTML de Kiwi necesitamos inyectar el desbloqueo Safari/iOS
+      // ANTES de que Kiwi cree su AudioContext.
+      if(contentType.includes("text/html")){
+        const chunks=[];
+        upRes.on("data",c=>chunks.push(c));
+        upRes.on("end",()=>{
+          let body=Buffer.concat(chunks).toString("utf8");
+          body=body.replace(/<head([^>]*)>/i, `<head$1><script>
+(function(){
+  const ua=navigator.userAgent||"";
+  const vendor=navigator.vendor||"";
+  const isSafari=/Safari/i.test(ua)&&/Apple Computer/i.test(vendor)&&
+    !/Chrome|CriOS|Chromium|Edg|OPR|Firefox|FxiOS/i.test(ua);
+  if(!isSafari)return;
+
+  const NativeAC=window.AudioContext||window.webkitAudioContext;
+  const contexts=[];
+
+  if(NativeAC){
+    function WrappedAudioContext(){
+      const ctx=new NativeAC(...arguments);
+      contexts.push(ctx);
+      window.__CW_AUDIO_CONTEXTS=contexts;
+      return ctx;
+    }
+    WrappedAudioContext.prototype=NativeAC.prototype;
+    try{Object.setPrototypeOf(WrappedAudioContext,NativeAC)}catch{}
+    try{window.AudioContext=WrappedAudioContext}catch{}
+    try{window.webkitAudioContext=WrappedAudioContext}catch{}
+  }
+
+  async function unlockAudio(){
+    let ok=false;
+    const list=window.__CW_AUDIO_CONTEXTS||contexts;
+    for(const ctx of list){
+      try{
+        if(ctx.state==="suspended"||ctx.state==="interrupted")await ctx.resume();
+        const b=ctx.createBuffer(1,1,22050);
+        const s=ctx.createBufferSource();
+        s.buffer=b;
+        s.connect(ctx.destination);
+        s.start(0);
+        if(ctx.state==="running")ok=true;
+      }catch{}
+    }
+    try{
+      const a=document.querySelectorAll("audio,video");
+      for(const el of a){
+        el.muted=false;
+        const p=el.play();
+        if(p&&p.catch)p.catch(()=>{});
+      }
+    }catch{}
+    const btn=document.getElementById("cwSafariAudioUnlock");
+    if(btn){
+      btn.textContent=ok?"AUDIO ✓":"START AUDIO";
+      if(ok)setTimeout(()=>{btn.style.opacity=".18"},900);
+    }
+    try{parent.postMessage({source:"cwlatam-kiwi",type:"audio-unlocked",ok},"*")}catch{}
+  }
+
+  function addButton(){
+    if(document.getElementById("cwSafariAudioUnlock"))return;
+    const btn=document.createElement("button");
+    btn.id="cwSafariAudioUnlock";
+    btn.type="button";
+    btn.textContent="START AUDIO";
+    btn.setAttribute("aria-label","Start audio");
+    Object.assign(btn.style,{
+      position:"fixed",left:"0",top:"0",zIndex:"2147483647",
+      width:"118px",height:"34px",minWidth:"118px",minHeight:"34px",
+      margin:"6px",padding:"0 6px",border:"1px solid #2d7d4a",
+      borderRadius:"8px",background:"#0c1c13",color:"#58ff92",
+      font:"900 9px system-ui",letterSpacing:".04em",
+      cursor:"pointer",boxSizing:"border-box"
+    });
+    btn.addEventListener("click",unlockAudio,{passive:true});
+    (document.body||document.documentElement).appendChild(btn);
+  }
+
+  if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",addButton,{once:true});
+  }else addButton();
+
+  window.addEventListener("message",e=>{
+    const d=e.data||{};
+    if(d.source==="cwlatam-parent"&&d.type==="show-audio-unlock"){
+      addButton();
+      const b=document.getElementById("cwSafariAudioUnlock");
+      if(b)b.style.opacity="1";
+    }
   });
+})();
+</script>`);
+          const out=Buffer.from(body,"utf8");
+          delete headers["content-length"];
+          delete headers["content-encoding"];
+          headers["content-length"]=String(out.length);
+          headers["cache-control"]="no-store";
+          res.writeHead(upRes.statusCode||200,headers);
+          res.end(out);
+        });
+        return;
+      }
 
-  up.setTimeout(15000, () => up.destroy(new Error("upstream timeout")));
+      res.writeHead(upRes.statusCode || 200, headers);
+      upRes.pipe(res);
+    }
+  );
+
+  up.setTimeout(15000, () => {
+    up.destroy(new Error("upstream timeout"));
+  });
 
   up.on("error", err => {
     console.error("SDR HTTP:", err.message);
+
     if (!res.headersSent) {
       res.writeHead(502, {
         "content-type": "text/plain; charset=utf-8",
         "cache-control": "no-store"
       });
     }
+
     res.end("SDR unavailable");
   });
 
