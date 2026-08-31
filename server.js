@@ -16,7 +16,7 @@ const WHATSAPP_ENABLED = String(process.env.WHATSAPP_ENABLED || "true").trim().t
 const CW_LATAM_URL = String(process.env.CW_LATAM_URL || "https://zp5dxs.github.io/CW-LATAM/").trim();
 
 /* Supabase SERVICE ROLE: sólo Render. Nunca frontend/GitHub. */
-const SUPABASE_URL = String(process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
+const SUPABASE_URL = String(process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "").replace(/\/rest\/v1$/i, "");
 const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
 
 const OPERATOR_TIME_ZONE = String(process.env.OPERATOR_TIME_ZONE || "America/Asuncion").trim();
