@@ -6879,13 +6879,11 @@ async function loadNetParticipants(netId,netDate){
   const title=document.getElementById("netParticipantsTitle");
   if(!wrap||!list)return;
   try{
-    const {data,error}=await sb.from("cw_net_participants")
-      .select("callsign,country_code,receiver_count,max_snr,wpm,first_seen")
-      .eq("net_id",netId)
-      .order("first_seen",{ascending:true})
-      .limit(300);
-    if(error)throw error;
-    const rows=Array.isArray(data)?data:[];
+    const r=await fetch(`${API_BASE}/net/participants?net_id=${encodeURIComponent(netId)}`,{cache:"no-store"});
+    if(!r.ok)throw new Error(`NET participants HTTP ${r.status}`);
+    const payload=await r.json();
+    if(!payload?.ok)throw new Error(payload?.error||"NET participants unavailable");
+    const rows=Array.isArray(payload.participants)?payload.participants:[];
     title.textContent=`PARTICIPANTES · ${netDateLabel(netDate)}`;
     list.innerHTML=rows.length
       ? rows.map(p=>`<div class="net-participant">
@@ -6911,13 +6909,11 @@ async function loadNetHistory(){
   const hist=document.getElementById("netHistoryList");
   if(!hist)return;
   try{
-    const {data,error}=await sb.from("cw_nets")
-      .select("id,net_date,status,participants,countries,receivers,reports,best_call,best_snr,widest_call,widest_receivers")
-      .eq("status","closed")
-      .order("net_date",{ascending:false})
-      .limit(10);
-    if(error)throw error;
-    netHistoryCache=Array.isArray(data)?data:[];
+    const r=await fetch(`${API_BASE}/net/history`,{cache:"no-store"});
+    if(!r.ok)throw new Error(`NET history HTTP ${r.status}`);
+    const payload=await r.json();
+    if(!payload?.ok)throw new Error(payload?.error||"NET history unavailable");
+    netHistoryCache=Array.isArray(payload.nets)?payload.nets:[];
     if(status)status.textContent=netHistoryCache.length?`${netHistoryCache.length} NET${netHistoryCache.length===1?"":"S"}`:"SIN DATOS";
     if(!netHistoryCache.length){
       renderNetSummaryCard(null);
