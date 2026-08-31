@@ -4769,11 +4769,16 @@ function sdrLoad(freq,{userGesture=false}={}){
 
    // Health queda sólo como diagnóstico paralelo, nunca bloquea audio.
    void sdrProbe(false).then(ok=>{
-     if(!ok && sdrAudioOn && seq===sdrLoadSeq){
-       sdrLastError="unavailable";
-       sdrConnecting=false;
-       updateSdrUi();
-     }
+     if(ok || !sdrAudioOn || seq!==sdrLoadSeq)return;
+     // Render/SDR puede estar despertando. Un primer health negativo no
+     // debe matar una sesión que acaba de abrirse desde el gesto del usuario.
+     setTimeout(()=>void sdrProbe(true).then(ok2=>{
+       if(!ok2 && sdrAudioOn && seq===sdrLoadSeq && sdrConnecting){
+         sdrLastError="unavailable";
+         sdrConnecting=false;
+         updateSdrUi();
+       }
+     }),2500);
    });
 
    sdrLoadTimer=setTimeout(()=>{
@@ -4796,11 +4801,16 @@ function sdrLoad(freq,{userGesture=false}={}){
    sdrHasSession=true;
 
    void sdrProbe(false).then(ok=>{
-     if(!ok && sdrAudioOn && seq===sdrLoadSeq){
-       sdrLastError="unavailable";
-       sdrConnecting=false;
-       updateSdrUi();
-     }
+     if(ok || !sdrAudioOn || seq!==sdrLoadSeq)return;
+     // Render/SDR puede estar despertando. Un primer health negativo no
+     // debe matar una sesión que acaba de abrirse desde el gesto del usuario.
+     setTimeout(()=>void sdrProbe(true).then(ok2=>{
+       if(!ok2 && sdrAudioOn && seq===sdrLoadSeq && sdrConnecting){
+         sdrLastError="unavailable";
+         sdrConnecting=false;
+         updateSdrUi();
+       }
+     }),2500);
    });
 
    sdrLoadTimer=setTimeout(()=>{
@@ -5079,6 +5089,8 @@ if(_sdrFrame){
    }
  });
 }
+// Despierta el proxy Render con antelación. No inicia audio ni consume el gesto iOS.
+setTimeout(()=>{void sdrProbe(true)},700);
 document.getElementById("sdrPlayBtn")?.addEventListener("click",sdrTogglePlay);
 window.addEventListener("message",e=>{
  if(!SDR_IS_SAFARI)return;
@@ -6831,6 +6843,7 @@ function renderOperatorState(state){
  if(bar){const show=Boolean(net.active);bar.classList.toggle("show",show);if(live)live.textContent=show?"● LXCW NET CONTROL · EN EL AIRE":"● LXCW NET CONTROL";if(metrics)metrics.textContent=show?`${Number(net.participants||0)} CHECK-INS · ${Number(net.countries||0)} PAÍSES · ${Number(net.receivers||0)} RECEPTORES`:"—"}
 }
 async function loadOperatorState(){try{const r=await fetch("https://cw-latam.onrender.com/operator",{cache:"no-store"});if(r.ok)renderOperatorState(await r.json())}catch{}}
+const API_BASE="https://cw-latam.onrender.com";
 let netHistoryCache=[];
 let selectedNetId=null;
 

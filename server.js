@@ -360,7 +360,7 @@ async function netStart(){
   await publishOperatorEvent(`net:start:${n.date}`,"net_start","LXCW NET CONTROL",msg,{net_date:n.date},true);
   broadcastOperatorState();
 }
-async function netPre(minutes){const p=localParts(),msg=minutes===30?["📻 *LXCW NET CONTROL · HOY*","","🕗 20:00–21:00","📡 *7.033 MHz · CW QRS*","","En 30 minutos comienza el NET automático semanal.","Llamá CQ normalmente y el radar registrará las estaciones detectadas.","","🔗 "+CW_LATAM_URL].join("\n"):["⏱ *LXCW NET CONTROL · 5 MINUTOS*","","📡 7.033 MHz · CW QRS","En cinco minutos abrimos el NET semanal.","","🔗 "+CW_LATAM_URL].join("\n");await publishOperatorEvent(`net:pre${minutes}:${p.date}`,"net_reminder","LXCW NET CONTROL",msg,{minutes},true)}
+async function netPre(minutes){const p=localParts(),msg=minutes===30?["📻 *LXCW NET CONTROL · HOY*","","🕕 18:00–20:00","📡 *7.033 MHz · CW QRS*","","En 30 minutos comienza el NET automático semanal.","Llamá CQ normalmente y el radar registrará las estaciones detectadas.","","🔗 "+CW_LATAM_URL].join("\n"):["⏱ *LXCW NET CONTROL · 5 MINUTOS*","","📡 7.033 MHz · CW QRS","En cinco minutos abrimos el NET semanal.","","🔗 "+CW_LATAM_URL].join("\n");await publishOperatorEvent(`net:pre${minutes}:${p.date}`,"net_reminder","LXCW NET CONTROL",msg,{minutes},true)}
 async function recordNetSpot(spot){
   const p=localParts();if(p.dow!==0||![18,19].includes(p.hour)||!spot.isChannel)return;const n=await ensureNet();if(!n)return;if(n.status!=="live")await netStart();
   const c=cleanCall(spot.dx);let x=n.participants.get(c);const isNew=!x;if(!x){x={call:c,country:roughCountry(c),firstSeen:Date.now(),lastSeen:Date.now(),spots:0,receivers:new Set(),maxSnr:null,wpm:Number(spot.wpm)||0};n.participants.set(c,x)}
@@ -605,7 +605,41 @@ const server=http.createServer((req,res)=>{
     const done=async()=>{let out=lastNetSummary,participants=[];if(supabaseConfigured())try{const rows=await sbRequest("cw_nets?select=*&status=eq.closed&order=net_date.desc&limit=1");if(rows?.length){out=rows[0];participants=await sbRequest(`cw_net_participants?select=callsign,country_code,first_seen,last_seen,receiver_count,max_snr,wpm&net_id=eq.${rows[0].id}&order=first_seen.asc&limit=300`)||[]}}catch{}const p=localParts();const showPublicToday=Boolean(out&&p.dow===0&&String(out.net_date||out.date||"")===localDateKey(0));res.writeHead(200,corsHeaders({"content-type":"application/json; charset=utf-8"}));res.end(JSON.stringify({ok:true,net:out||null,participants,showPublicToday}))};void done();return;
   }
   if(url.pathname==="/net/history"){
-    const done=async()=>{try{const nets=supabaseConfigured()?await sbRequest("cw_nets?select=id,net_date,status,participants,countries,receivers,reports,best_call,best_snr,widest_call,widest_receivers&status=eq.closed&order=net_date.desc&limit=10")||[]:[];res.writeHead(200,corsHeaders({"content-type":"application/json; charset=utf-8"}));res.end(JSON.stringify({ok:true,nets}))}catch(e){res.writeHead(500,corsHeaders({"content-type":"application/json; charset=utf-8"}));res.end(JSON.stringify({ok:false,error:e.message}))}};void done();return;
+    const done=async()=>{
+      try{
+        if(!supabaseConfigured()){
+          res.writeHead(200,corsHeaders({"content-type":"application/json; charset=utf-8"}));
+          res.end(JSON.stringify({ok:true,nets:[],configured:false}));
+          return;
+        }
+        const rows=await sbRequest("cw_nets?select=id,net_date,status,participants,countries,receivers,reports,best_call,best_snr,widest_call,widest_receivers&order=net_date.desc&limit=10")||[];
+        const nets=[];
+        for(const row of rows){
+          const hasSummary=String(row.status||"")==="closed" || Number(row.participants||0)>0 || Number(row.reports||0)>0 || Number(row.receivers||0)>0;
+          if(hasSummary){nets.push(row);continue}
+          // Compatibilidad con el NET anterior: si Render no ejecutó el cierre,
+          // los check-ins igualmente pueden haber quedado persistidos.
+          const ps=await sbRequest(`cw_net_participants?select=callsign,country_code,receiver_count,receiver_calls,max_snr&net_id=eq.${encodeURIComponent(row.id)}&order=first_seen.asc&limit=500`)||[];
+          if(!ps.length)continue;
+          const countries=new Set(),receivers=new Set();
+          let bestCall=null,bestSnr=null,widestCall=null,widestReceivers=0;
+          for(const p of ps){
+            if(p.country_code)countries.add(p.country_code);
+            if(Array.isArray(p.receiver_calls))for(const rx of p.receiver_calls)if(rx)receivers.add(rx);
+            const snr=p.max_snr===null?null:Number(p.max_snr);
+            if(Number.isFinite(snr)&&(bestSnr===null||snr>bestSnr)){bestSnr=snr;bestCall=p.callsign}
+            const rc=Number(p.receiver_count||0);
+            if(rc>widestReceivers){widestReceivers=rc;widestCall=p.callsign}
+          }
+          nets.push({...row,participants:ps.length,countries:countries.size,receivers:receivers.size||Math.max(...ps.map(p=>Number(p.receiver_count||0)),0),best_call:bestCall,best_snr:bestSnr,widest_call:widestCall,widest_receivers:widestReceivers,recovered:true});
+        }
+        res.writeHead(200,corsHeaders({"content-type":"application/json; charset=utf-8"}));
+        res.end(JSON.stringify({ok:true,nets,configured:true}));
+      }catch(e){
+        res.writeHead(500,corsHeaders({"content-type":"application/json; charset=utf-8"}));
+        res.end(JSON.stringify({ok:false,error:e.message}));
+      }
+    };void done();return;
   }
   if(url.pathname==="/net/participants"){
     const done=async()=>{try{const id=String(url.searchParams.get("net_id")||"").trim();if(!id){res.writeHead(400,corsHeaders({"content-type":"application/json; charset=utf-8"}));res.end(JSON.stringify({ok:false,error:"net_id required"}));return}const participants=supabaseConfigured()?await sbRequest(`cw_net_participants?select=callsign,country_code,receiver_count,max_snr,wpm,first_seen&net_id=eq.${encodeURIComponent(id)}&order=first_seen.asc&limit=300`)||[]:[];res.writeHead(200,corsHeaders({"content-type":"application/json; charset=utf-8"}));res.end(JSON.stringify({ok:true,participants}))}catch(e){res.writeHead(500,corsHeaders({"content-type":"application/json; charset=utf-8"}));res.end(JSON.stringify({ok:false,error:e.message}))}};void done();return;
