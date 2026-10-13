@@ -3059,6 +3059,7 @@ html.sdr-safari.sdr-audio-unlock-needed .sdr-scan-wrap .sdr-scan{
   }
 }
 </style>
+  <script src="./frontend-api.js"></script>
 </head>
 <body>
 <div class="shell">
@@ -4635,7 +4636,7 @@ function renderActivity(){
 function renderFeed(){}
 
 // ---- SDR AUDIO · DIAL / SCAN --------------------------------------------------
-const SDR_BASE_URL="https://cw-latam-sdr.onrender.com/";
+const SDR_BASE_URL="https://latam-api.zp5dxs.org/sdr/";
 const SDR_IS_SAFARI=(()=>{
  const ua=navigator.userAgent;
  const vendor=navigator.vendor||"";
@@ -4681,7 +4682,7 @@ function sdrSafariPost(type,extra={}){
  try{
    f?.contentWindow?.postMessage(
      {source:"cwlatam-parent",type,...extra},
-     "https://cw-latam-sdr.onrender.com"
+     "https://latam-api.zp5dxs.org"
    );
  }catch{}
 }
@@ -4736,7 +4737,7 @@ async function sdrProbe(force=false){
  const now=Date.now();
  if(!force && now-sdrLastProbeAt<SDR_PROBE_CACHE_MS)return sdrLastProbeOk;
  try{
-   const r=await fetch("https://cw-latam-sdr.onrender.com/__health",{cache:"no-store"});
+   const r=await fetch("https://latam-api.zp5dxs.org/__health",{cache:"no-store"});
    sdrLastProbeAt=Date.now();
    sdrLastProbeOk=r.ok;
    return r.ok;
@@ -5094,7 +5095,7 @@ setTimeout(()=>{void sdrProbe(true)},700);
 document.getElementById("sdrPlayBtn")?.addEventListener("click",sdrTogglePlay);
 window.addEventListener("message",e=>{
  if(!SDR_IS_SAFARI)return;
- if(e.origin!=="https://cw-latam-sdr.onrender.com")return;
+ if(e.origin!=="https://latam-api.zp5dxs.org")return;
  const d=e.data||{};
  if(d.source!=="cwlatam-kiwi")return;
 
@@ -5268,9 +5269,8 @@ applyTheme("dark");
 
 
 // ===== SUPABASE / COMUNIDAD / MI FOCO =======================================
-const SUPABASE_URL="https://lvdvcpbdlatytbclcpjz.supabase.co";
-const SUPABASE_KEY="sb_publishable_1qpSLO031HAvKSXAQu1L8A_ADGcntcE";
-const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+const sb = window.cwLatamLocalApi;
 
 let currentProfile=null;
 let sessionToken=localStorage.getItem("cwlatam_profile_token")||"";
@@ -6842,8 +6842,8 @@ function renderOperatorState(state){
  if(!state)return;operatorStateCache=state;const net=state.net||{},bar=document.getElementById("netControlBar"),live=document.getElementById("netControlLive"),metrics=document.getElementById("netControlMetrics");
  if(bar){const show=Boolean(net.active);bar.classList.toggle("show",show);if(live)live.textContent=show?"● LXCW NET CONTROL · EN EL AIRE":"● LXCW NET CONTROL";if(metrics)metrics.textContent=show?`${Number(net.participants||0)} CHECK-INS · ${Number(net.countries||0)} PAÍSES · ${Number(net.receivers||0)} RECEPTORES`:"—"}
 }
-async function loadOperatorState(){try{const r=await fetch("https://cw-latam.onrender.com/operator",{cache:"no-store"});if(r.ok)renderOperatorState(await r.json())}catch{}}
-const API_BASE="https://cw-latam.onrender.com";
+async function loadOperatorState(){try{const r=await fetch("https://latam-api.zp5dxs.org/operator",{cache:"no-store"});if(r.ok)renderOperatorState(await r.json())}catch{}}
+const API_BASE="https://latam-api.zp5dxs.org";
 let netHistoryCache=[];
 let selectedNetId=null;
 
@@ -6964,7 +6964,7 @@ setInterval(loadNetHistory,5*60000);
 // ---- EN VIVO RBN INPUT ---------------------------------------------------------
 // GitHub Pages cannot open telnet.reversebeacon.net:7000 directly.
 // Set this to the public WSS URL of the tiny relay included with this package.
-const RBN_WS_URL = window.CW_LATAM_WS_URL || "wss://cw-latam.onrender.com";
+const RBN_WS_URL = window.CW_LATAM_WS_URL || "wss://latam-api.zp5dxs.org";
 
 let rbnSocket=null;
 let reconnectTimer=null;
@@ -6974,7 +6974,7 @@ let clientWatchdogTimer=null;
 const CLIENT_WATCHDOG_MS=40000;
 
 // WebSocket es la vía primaria. HTTP queda como respaldo real.
-const RBN_HTTP_URL="https://cw-latam.onrender.com";
+const RBN_HTTP_URL="https://latam-api.zp5dxs.org";
 const HTTP_POLL_MS=3000;
 const HTTP_SKIP_IF_WS_FRESH_MS=8000;
 let lastSpotSeq=0;
