@@ -4,6 +4,7 @@ const { WebSocketServer } = require("ws");
 
 const db = require("./db-local.js");
 const apiLocal = require("./api-local.js");
+const { Pool } = require("pg");
 
 const PORT = Number(process.env.PORT || 3000);
 const RBN_HOST = "telnet.reversebeacon.net";
@@ -162,6 +163,39 @@ function weatherLine(){
 }
 
 function whatsappConfigured(){return Boolean(WHATSAPP_ENABLED&&WHAPI_API_URL&&WHAPI_TOKEN&&WHAPI_GROUP_ID)}
+const landingDbPool = process.env.DATABASE_URL
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 3
+    })
+  : null;
+
+async function landingRpc(res, functionName){
+  if(!landingDbPool){
+    res.writeHead(503,corsHeaders({"content-type":"application/json; charset=utf-8"}));
+    res.end(JSON.stringify({error:"database unavailable"}));
+    return;
+  }
+
+  try{
+    const result = await landingDbPool.query(
+      `SELECT public.${functionName}() AS data`
+    );
+
+    const data = result.rows?.[0]?.data ?? null;
+
+    res.writeHead(200,corsHeaders({
+      "content-type":"application/json; charset=utf-8",
+      "cache-control":"no-store"
+    }));
+    res.end(JSON.stringify(data));
+  }catch(e){
+    console.error("Landing RPC error:",functionName,e.message);
+    res.writeHead(500,corsHeaders({"content-type":"application/json; charset=utf-8"}));
+    res.end(JSON.stringify({error:"rpc failed"}));
+  }
+}
+
 function supabaseConfigured(){
   return Boolean(process.env.DATABASE_URL);
 }
@@ -694,6 +728,32 @@ const server=http.createServer(async (req,res)=>{
     return;
   }
   const url=new URL(req.url,`http://${req.headers.host||"localhost"}`);
+  if(req.method==="OPTIONS"){
+    res.writeHead(204,corsHeaders({
+      "access-control-allow-methods":"GET, POST, OPTIONS",
+      "access-control-allow-headers":"Content-Type, Authorization, apikey"
+    }));
+    res.end();
+    return;
+  }
+
+  if(
+    req.method==="POST" &&
+    url.pathname==="/rest/v1/rpc/cw_get_public_stats"
+  ){
+    await landingRpc(res,"cw_get_public_stats");
+    return;
+  }
+
+  if(
+    req.method==="POST" &&
+    url.pathname==="/rest/v1/rpc/cw_get_country_stats"
+  ){
+    await landingRpc(res,"cw_get_country_stats");
+    return;
+  }
+
+
   if(url.pathname==="/sdr-status"){
     void sdrTcpStatus().then(ok=>{
       res.writeHead(ok?200:503,corsHeaders({"content-type":"application/json; charset=utf-8"}));
